@@ -36,7 +36,28 @@ urlpatterns = [
     #Producto
     path("producto/",views.ProductoViews.as_view(), name ="producto"),
     path("producto/<int:pk>/", views.ProductoViews.as_view(), name ="producto_pk"),
-    path("producto_list/<int:emisor_id>", views.ProductoListEmisor.as_view(), name="producto_list"),#Para
+    path("producto_list/<int:emisor_id>/", views.ProductoListEmisor.as_view(), name="producto_list"),#Para
+    
+    #Factura
+    path("factura/", views.FacturaView.as_view(), name ="factura"),
+    path("factura/<int:pk>/", views.FacturaView.as_view(), name ="factura"),
+    
+    #Factura detalle
+    path("factura_detalle/", views.FacturDetalleViews.as_view(), name ="factura_detalle"),
+    path("factura_detalle/<int:pk>/", views.FacturDetalleViews.as_view(), name ="factura_detalle_pk"),
+    
+    
+    #FormaPago
+    path("forma_pago/", views.FormaPagoView.as_view(), name ="forma_pago"),
+    path("forma_pago/<int:pk>/", views.FormaPagoView.as_view(), name ="forma_pago_pk"),
+    
+    #FormaPagoFactura
+    path("forma_pago_factura/", views.FormaPagoFacturaView.as_view(), name ="forma_pago_factura"),
+    path("forma_pago_factura/<int:pk>/", views.FormaPagoFacturaView.as_view(), name ="forma_pago_factura_id"),
+    
+    #Otro
+    path("otro/", views.OtroViews.as_view(), name ="otro"),
+    path("otro/<int:pk>/", views.OtroViews.as_view(), name ="otro"),
     
     
 ]

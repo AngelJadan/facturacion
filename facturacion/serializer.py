@@ -167,17 +167,45 @@ class ProductoSerializer(serializers.ModelSerializer):
             "precio2",
             "precio3",
             "precio4",
-            "iva",
+            "tipo_iva",
+            "valor_iva",
             "descripcion",
             "emisor",
             "usuario"
         )
 
 
+class OtroSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Otro
+        fields = (
+            "id",
+            "nombre",
+            "descripcion",
+            "factura",
+        )
+
+
+class FormaPagoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormaPago
+        fields = (
+            "id",
+            "codigo",
+            "descripcion",
+            "usuario",
+        )
+
+
 class FacturaCabeceraSerializer(serializers.ModelSerializer):
-    facturaDetalle = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    otro = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    forma_pago = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    factura_detalle = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    forma_pago_factura = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    otro_factura = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+        
+    #factura_detalle = FacturaDetalleSerializer(many=True, read_only=True)
+    #forma_pago_factura = FormaPagoSerializer(many=True, read_only=True)
+    #otro_factura = OtroSerializer(many=True, read_only=True)
+    
     
     class Meta:
         model = FacturaCabecera
@@ -201,15 +229,15 @@ class FacturaCabeceraSerializer(serializers.ModelSerializer):
             "totaldescuento",
             "totalice",
             "totalirbpnt",
-            "iva",
-            "valorIva",
+            "tipo_iva",
+            "valor_iva",
             "propina",
             "total",
             "estado",
             "usuario",
-            "facturaDetalle",
-            "otro",
+            "factura_detalle",
             "forma_pago_factura",
+            "otro_factura"
         )
 
 
@@ -229,6 +257,32 @@ class FacturaDetalleSerializer(serializers.ModelSerializer):
             "usuario"
         )
 
+
+    
+class FormaPagoFacturaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormaPagoFactura
+        fields = (
+            "id",
+            "formaPago",
+            "facturaid",
+            "tiempo",
+            "plazo",
+            "valor",
+            "usuario"
+        )
+        
+class FormaPagoNotaDebitoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormaPagoNotaDebito
+        fields = (
+            "id",
+            "nota_debito",
+            "forma_pago",
+            "plazo",
+            "valor",
+            "usuario"            
+        )
 
 class NotaDebitoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -259,51 +313,6 @@ class NotaDebitoSerializer(serializers.ModelSerializer):
         )
 
 
-class OtroSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Otro
-        fields = (
-            "id",
-            "nombre",
-            "descripcion",
-            "factura",
-        )
-
-
-class FormaPagoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FormaPago
-        fields = (
-            "id",
-            "codigo",
-            "descripcion",
-            "usuario",
-        )
-    
-class FormaPagoFacturaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FormaPagoFactura
-        fields = (
-            "id",
-            "formaPago",
-            "facturaid",
-            "tiempo",
-            "plazo",
-            "valor",
-            "usuario"
-        )
-        
-class FormaPagoNotaDebitoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FormaPagoNotaDebito
-        fields = (
-            "id",
-            "nota_debito",
-            "forma_pago",
-            "plazo",
-            "valor",
-            "usuario"            
-        )
 
 
 class NotaCreditoSerializer(serializers.ModelSerializer):

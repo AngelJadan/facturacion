@@ -42,18 +42,27 @@ urlpatterns = [
     path("factura/", views.FacturaView.as_view(), name ="factura"),
     path("factura/<int:pk>/", views.FacturaView.as_view(), name ="factura"),
     
-    #Factura detalle
-    path("factura_detalle/", views.FacturDetalleViews.as_view(), name ="factura_detalle"),
-    path("factura_detalle/<int:pk>/", views.FacturDetalleViews.as_view(), name ="factura_detalle_pk"),
-    
     
     #FormaPago
     path("forma_pago/", views.FormaPagoView.as_view(), name ="forma_pago"),
     path("forma_pago/<int:pk>/", views.FormaPagoView.as_view(), name ="forma_pago_pk"),
     
+    
     #FormaPagoFactura
     path("forma_pago_factura/", views.FormaPagoFacturaView.as_view(), name ="forma_pago_factura"),
     path("forma_pago_factura/<int:pk>/", views.FormaPagoFacturaView.as_view(), name ="forma_pago_factura_id"),
+    path("factura_list_emisor_range_date/<int:id_emisor>/<str:date_init>/<str:date_end>/", views.FacturaListEmisorRangeDate.as_view(), name ="factura_list_emisor_range_date"),
+    path("factura_list_emisor_month/<int:id_emisor>/<str:month>/<str:year>/", views.FacturaListEmisorMonth.as_view(), name ="factura_list_emisor_month"),
+    #path("list_to_factura_formapago/", views.ListToFacturaFormaPago.as_view(), name="list_to_factura_formapago"),
+    
+    #Factura detalle
+    path("factura_detalle/", views.FacturDetalleViews.as_view(), name ="factura_detalle"),
+    path("factura_detalle/<int:pk>/", views.FacturDetalleViews.as_view(), name ="factura_detalle_pk"),
+    
+    
+    #NotaDebito
+    path("nota_debito/", views.NotaDebitoView.as_view(), name ="nota_debito"),
+    path("nota_debito/<int:pk>/", views.NotaDebitoView.as_view(), name ="nota_debito_pk"),
     
     #Otro
     path("otro/", views.OtroViews.as_view(), name ="otro"),

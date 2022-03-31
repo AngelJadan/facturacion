@@ -17,6 +17,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework.generics import ListAPIView, UpdateAPIView
 from rest_framework import status, viewsets
+from django.db import transaction, IntegrityError
 
 from ventas.forms import UserForm
 from ventas.models import *
@@ -766,31 +767,102 @@ class FacturaView(LoginRequiredMixin, APIView):
     @action(detail=False, method="POST")
     def post(self, request, format=json):
         try:
-            print("ingreso")
-            if request.user.is_authenticated:
-                #print('data ', request.data)
-                serializer = FacturaCabeceraSerializer(data=request.data)
-                
-                print("serializer ", serializer)
-                
-                if serializer.is_valid():
-                    print('datos validados')
+            with transaction.atomic():
+                print("ingreso")
+                if request.user.is_authenticated:
+                    print('data factura_detalle ', len(request.data["factura_detalle"]))
+                    serializer = FacturaCabeceraSerializer(data=request.data)
                     
-                    facts = FacturaCabecera.search_to_factura(
-                        request.data["establecimiento"], request.data["punto_emision"], request.data["secuencia"], request.data["emisor"])
-                    print('facts ',facts)
-                    if len(facts) > 0:
-                        print("Factura con datos repetidos.")
-                        return Response({"Error: ": "Ya existe una factura con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
+                    #print("serializer ", serializer)
+                    
+                    if serializer.is_valid():
+                        print('datos validados')
+                        
+                        facts = FacturaCabecera.search_to_factura(
+                            request.data["establecimiento"], request.data["punto_emision"], request.data["secuencia"], request.data["emisor"])
+                        print('facts ',facts)
+                        if len(facts) > 0:
+                            print("Factura con datos repetidos.")
+                            return Response({"Error: ": "Ya existe una factura con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
+                        else:
+                            print('serializer para guardar ')
+                            serializer.save()
+                            print("factura guardada ")
+                            
+                            data_factura_detalle = request.data["factura_detalle"]
+                            #tam_factura_detalle = len(data_factura_detalle)
+                            for detail in data_factura_detalle:
+                                tem_cantidad = detail["cantidad"]
+                                tem_valor_unitario = detail["valorUnitario"]
+                                tem_descuento = detail["descuento"]
+                                tem_ice = detail["ice"]
+                                tem_valor_total = detail["valorTotal"]
+                                tem_irbpnr = detail["irbpnr"]
+                                tem_factura = serializer.data["id"]
+                                tem_producto = detail["producto"]
+                                tem_usuario = request.user
+                                
+                                factura_detalle = FacturaDetalle(
+                                    cantidad = tem_cantidad,
+                                    valorUnitario = tem_valor_unitario,
+                                    descuento = tem_descuento,
+                                    ice = tem_ice,
+                                    valorTotal = tem_valor_total,
+                                    irbpnr = tem_irbpnr,
+                                    factura = FacturaCabecera(id=tem_factura),
+                                    producto = Producto(id=tem_producto),
+                                    usuario = tem_usuario,
+                                )
+                                res = FacturaDetalle.create(factura_detalle)
+                                print("detalle guardado ",str(res))
+                            
+                            data_forma_pagos_factura = request.data["forma_pago_factura"]
+                            for pago in data_forma_pagos_factura:
+                                temp_formaPago = pago["formaPago"]
+                                temp_tiempo = pago["tiempo"]
+                                temp_plazo = pago["plazo"]
+                                temp_valor = pago["valor"]
+                                temp_usuario = request.user
+                                
+                                forma_pago_factura = FormaPagoFactura(
+                                    formaPago = FormaPago(id=temp_formaPago),
+                                    facturaid = FacturaCabecera(id=serializer.data["id"]),
+                                    tiempo = temp_tiempo,
+                                    plazo = temp_plazo,
+                                    valor = temp_valor,  
+                                    usuario = temp_usuario
+                                )
+                                
+                                res = FormaPagoFactura.create(forma_pago_factura)
+                                print("registrado forma de pago factura ", str(res))
+                            #tam_forma_pagos_factura =  len(data_forma_pagos_factura)
+                            
+                            
+                            data_otros_factura = request.data["otro_factura"]
+                            
+                            for otro in data_otros_factura:
+                                tem_nombre = otro["nombre"]
+                                tem_descripcion = otro["descripcion"]
+                                tem_factura = serializer.data["id"]
+                                
+                                otro_factura = Otro(
+                                    nombre = tem_nombre,
+                                    descripcion = tem_descripcion,
+                                    factura = FacturaCabecera(id=tem_factura)
+                                )
+                                res  = Otro.create(otro_factura)
+                                print("Registrado otro factura ",str(res))
+                                
+                            #tam_otros_factura = len(data_otros_factura)
+                            
+                            
+                            return Response(serializer.data, status=status.HTTP_201_CREATED)
                     else:
-                        print('serializer para guardar ')
-                        serializer.save()
-                        print("factura guardada")
-                        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                        return Response({"Error":"Formato invalido. "},status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response({"Error":"Formato invalido. "},status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(status.HTTP_401_UNAUTHORIZED)
+                    return Response(status.HTTP_401_UNAUTHORIZED)
+        except IntegrityError:
+            return Response({"Error":"Error de integridad"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except BaseException as ex:
             return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -906,9 +978,9 @@ class FacturaListEmisorMonth(ListAPIView):
     def get_queryset(self):
         try:
             if self.request.user.is_authenticated:
+                id_emisor = self.kwargs["id_emisor"]
                 month = self.kwargs["month"]
                 year = self.kwargs["year"]
-                id_emisor = self.kwargs["id_emisor"]
 
                 return FacturaCabecera.list_to_month_year(month, year, id_emisor)
             else:
@@ -987,15 +1059,17 @@ class NotaDebitoView(LoginRequiredMixin, APIView):
     @action(detail=False, method="POST")
     def post(self, request, format=json):
         if request.user.is_authenticated:
-            nota_debito = NotaDebito.filter(
-                establecimiento=request.data["establecimiento"], puntoEmision=request.data["puntoEmision"], secuencia=request.data["secuencia"])
-            ser = NotaDebitoSerializer(nota_debito, many=True)
-            if len(nota_debito) > 0:
-                return Response(ser.data, status=status.HTTP_400_BAD_REQUEST)
+            serializer = NotaDebitoSerializer(data=request.data)
+            if serializer.is_valid():
+                nota_debito = NotaDebito.objects.filter(
+                    establecimiento=request.data["establecimiento"], puntoEmision=request.data["puntoEmision"], secuencia=request.data["secuencia"])
+                if len(nota_debito) > 0:
+                    return Response({"Error":"Este documento ya esta registrado."}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    serializer.save()
+                    return Response(status=status.HTTP_200_OK)
             else:
-                serializer = NotaDebito(data=request.data)
-                serializer.save()
-                return Response(status=status.HTTP_200_OK)
+                return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 

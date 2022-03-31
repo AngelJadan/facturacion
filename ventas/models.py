@@ -872,7 +872,7 @@ class Otro(models.Model):
     def create(otro):
         try:
             otro.save()
-            return otro._id
+            return otro.id
         except BaseException as ex:
             return ex
     def update(otro):
@@ -972,6 +972,12 @@ class FormaPagoFactura(models.Model):
         verbose_name = "Forma de pago factura"
         verbose_name_plural = "Formas de pago de factura"
     
+    def create(factura_pago):
+        try:
+            factura_pago.save()
+            return factura_pago.id
+        except BaseException as ex:
+            return ex
     
     def search_id(id=int):
         try:

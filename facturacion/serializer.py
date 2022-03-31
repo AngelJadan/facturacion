@@ -195,16 +195,49 @@ class FormaPagoSerializer(serializers.ModelSerializer):
             "descripcion",
             "usuario",
         )
+        
+        
+class FormaPagoFacturaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormaPagoFactura
+        fields = (
+            "id",
+            "formaPago",
+            "facturaid",
+            "tiempo",
+            "plazo",
+            "valor",
+            "usuario"
+        )
+
+
+
+class FacturaDetalleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FacturaDetalle
+        fields = (
+            "id",
+            "cantidad",
+            "valorUnitario",
+            "descuento",
+            "ice",
+            "valorTotal",
+            "irbpnr",
+            "factura",
+            "producto",
+            "usuario"
+        )
+
 
 
 class FacturaCabeceraSerializer(serializers.ModelSerializer):
-    factura_detalle = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    forma_pago_factura = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    otro_factura = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    #factura_detalle = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    #forma_pago_factura = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    #otro_factura = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
         
-    #factura_detalle = FacturaDetalleSerializer(many=True, read_only=True)
-    #forma_pago_factura = FormaPagoSerializer(many=True, read_only=True)
-    #otro_factura = OtroSerializer(many=True, read_only=True)
+    factura_detalle = FacturaDetalleSerializer(many=True, read_only=True)
+    forma_pago_factura = FormaPagoFacturaSerializer(many=True, read_only=True)
+    otro_factura = OtroSerializer(many=True, read_only=True)
     
     
     class Meta:
@@ -240,37 +273,7 @@ class FacturaCabeceraSerializer(serializers.ModelSerializer):
             "otro_factura"
         )
 
-
-class FacturaDetalleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FacturaDetalle
-        fields = (
-            "id",
-            "cantidad",
-            "valorUnitario",
-            "descuento",
-            "ice",
-            "valorTotal",
-            "irbpnr",
-            "factura",
-            "producto",
-            "usuario"
-        )
-
-
     
-class FormaPagoFacturaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FormaPagoFactura
-        fields = (
-            "id",
-            "formaPago",
-            "facturaid",
-            "tiempo",
-            "plazo",
-            "valor",
-            "usuario"
-        )
         
 class FormaPagoNotaDebitoSerializer(serializers.ModelSerializer):
     class Meta:

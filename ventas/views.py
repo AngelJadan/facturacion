@@ -1,4 +1,5 @@
 from ast import Is
+from asyncio.log import logger
 import datetime
 from distutils.log import error
 import json
@@ -2203,16 +2204,84 @@ class RetencionCompraView(LoginRequiredMixin, APIView):
             return Response({"Error ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
 class GenerateSecuenceDocument(LoginRequiredMixin, APIView):
     
     permission_classes = [IsAuthenticated]
     
+    @action(detail=False, method="GET")
     def get(self, request, *args,**kwargs):
         tipo_doc = self.kwargs["tipo_doc"]
         id_emisor = self.kwargs["id_emisor"]
         establecimiento = self.kwargs["establecimiento"]
         p_emision = self.kwargs["p_emision"]
+        
+        print("tipo_doc ",tipo_doc)
+        print("id_emisor ",id_emisor)
+        print("establecimiento ",establecimiento)
+        print("p_emision ",p_emision)
+        #1 Factura.
+        #2 Nota de credito.
+        #3 Nota de debito.
+        #4 Retencion.
+            
         if (request.user.is_authenticated):
-            return Response({"SMS":"Serie generada. "}, status=status.HTTP_200_OK)
+            try:
+                emisor_temp = Emisor.objects.get(id=id_emisor)
+                print("emisor temporal ",emisor_temp.id)
+                try:
+                    establecimiento_temp = Establecimiento.objects.get(id=establecimiento)
+                    print("establecimiento_temp ",establecimiento_temp)
+                    
+                    try:
+                        p_emision_temp = PuntoEmision.objects.get(id=p_emision)
+                    except PuntoEmision.DoesNotExist as pemi:
+                        logger.error(pemi)
+                        return Response({"Error":"No existe el punto de emision solicitado."},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        
+                    if tipo_doc ==1:
+                        fact = FacturaCabecera.objects.filter(
+                            establecimiento=establecimiento_temp.id,
+                            punto_emision=p_emision_temp.id, 
+                            emisor=emisor_temp.id
+                        ).order_by('secuencia').latest('secuencia')
+                        nueva_factura = int(fact.secuencia)+1
+                        return Response({"SMS":"Nueva secuencia","SECUENCIA":nueva_factura}, status=status.HTTP_200_OK)
+                    if tipo_doc==2:
+                        nota_credito = NotaCredito.objects.filter(
+                            establecimiento=establecimiento_temp.id,
+                            puntoEmision = p_emision_temp.id,
+                            emisor=emisor_temp.id
+                        ).order_by('secuencia').latest('secuencia')
+                        nueva_nc_serie = int(nota_credito.secuencia)+1
+                        return Response({"SMS":"Nueva secuencia","SECUENCIA":nueva_nc_serie}, status=status.HTTP_200_OK)
+                    if tipo_doc==3:
+                        nota_debito = NotaDebito.objects.filter(
+                            establecimiento=establecimiento_temp.id,
+                            puntoEmision = p_emision_temp.id,
+                            emisor=emisor_temp.id
+                        ).order_by('secuencia').latest("secuencia")
+                        nota_debito_serie = int(nota_debito.secuencia)+1
+                        return Response({"SMS":"Serie generada nota de debito. ","SECUENCIA":nota_debito_serie}, status=status.HTTP_200_OK)
+                    if tipo_doc==4:
+                        retencion = Retencion.objects.filter(
+                            establecimiento=establecimiento_temp.id,
+                            pemision = p_emision_temp.id,
+                            emisor=emisor_temp.id
+                        ).order_by('secuencia').latest('secuencia')
+                        nueva_retencion = int(retencion.secuencia)+1
+                        return Response({"SMS":"Serie generada retencion. ","SECUENCIA":nueva_retencion}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"SMS":"No se ha recibido un tipo de documento valido. "}, status=status.HTTP_200_OK)
+                except Establecimiento.DoesNotExist as est:
+                    logger.error(est)
+                    return Response({"Error":"No existe el establecimiento solicitado. "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
+                    
+                    
+            except Emisor.DoesNotExist:
+                return Response({"Error":"No existe el emisor solicitado. "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
         else:
             return Response({"Error":"Serie generada. "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+

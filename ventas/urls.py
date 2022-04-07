@@ -109,6 +109,7 @@ urlpatterns = [
     #Retencion de compras.
     path("retencion_compra/", views.RetencionCompraView.as_view(), name ="retencion_compra"),
     path("retencion_compra/<int:pk>/", views.RetencionCompraView.as_view(), name ="retencion_compra_pk"),
+    path("generate_secuence_document/<int:tipo_doc>/<int:id_emisor>/<int:establecimiento>/<int:p_emision>/", views.GenerateSecuenceDocument.as_view(), name="generate_secuence_document"),
     
     
     

@@ -231,6 +231,7 @@ class NotaCreditoAdmin(admin.ModelAdmin):
             "total",
             "estado",
             "emisor",
+            "cliente",
             "usuario",
         )
 

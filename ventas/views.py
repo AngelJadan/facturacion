@@ -770,17 +770,18 @@ class FacturaView(LoginRequiredMixin, APIView):
             with transaction.atomic():
                 print("ingreso")
                 if request.user.is_authenticated:
-                    print('data factura_detalle ', len(request.data["factura_detalle"]))
+                    print('data factura_detalle ', len(
+                        request.data["factura_detalle"]))
                     serializer = FacturaCabeceraSerializer(data=request.data)
-                    
+
                     #print("serializer ", serializer)
-                    
+
                     if serializer.is_valid():
                         print('datos validados')
-                        
+
                         facts = FacturaCabecera.search_to_factura(
                             request.data["establecimiento"], request.data["punto_emision"], request.data["secuencia"], request.data["emisor"])
-                        print('facts ',facts)
+                        print('facts ', facts)
                         if len(facts) > 0:
                             print("Factura con datos repetidos.")
                             return Response({"Error: ": "Ya existe una factura con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
@@ -788,7 +789,7 @@ class FacturaView(LoginRequiredMixin, APIView):
                             print('serializer para guardar ')
                             serializer.save()
                             print("factura guardada ")
-                            
+
                             data_factura_detalle = request.data["factura_detalle"]
                             #tam_factura_detalle = len(data_factura_detalle)
                             for detail in data_factura_detalle:
@@ -801,21 +802,21 @@ class FacturaView(LoginRequiredMixin, APIView):
                                 tem_factura = serializer.data["id"]
                                 tem_producto = detail["producto"]
                                 tem_usuario = request.user
-                                
+
                                 factura_detalle = FacturaDetalle(
-                                    cantidad = tem_cantidad,
-                                    valorUnitario = tem_valor_unitario,
-                                    descuento = tem_descuento,
-                                    ice = tem_ice,
-                                    valorTotal = tem_valor_total,
-                                    irbpnr = tem_irbpnr,
-                                    factura = FacturaCabecera(id=tem_factura),
-                                    producto = Producto(id=tem_producto),
-                                    usuario = tem_usuario,
+                                    cantidad=tem_cantidad,
+                                    valorUnitario=tem_valor_unitario,
+                                    descuento=tem_descuento,
+                                    ice=tem_ice,
+                                    valorTotal=tem_valor_total,
+                                    irbpnr=tem_irbpnr,
+                                    factura=FacturaCabecera(id=tem_factura),
+                                    producto=Producto(id=tem_producto),
+                                    usuario=tem_usuario,
                                 )
                                 res = FacturaDetalle.create(factura_detalle)
-                                print("detalle guardado ",str(res))
-                            
+                                print("detalle guardado ", str(res))
+
                             data_forma_pagos_factura = request.data["forma_pago_factura"]
                             for pago in data_forma_pagos_factura:
                                 temp_formaPago = pago["formaPago"]
@@ -823,46 +824,46 @@ class FacturaView(LoginRequiredMixin, APIView):
                                 temp_plazo = pago["plazo"]
                                 temp_valor = pago["valor"]
                                 temp_usuario = request.user
-                                
+
                                 forma_pago_factura = FormaPagoFactura(
-                                    formaPago = FormaPago(id=temp_formaPago),
-                                    facturaid = FacturaCabecera(id=serializer.data["id"]),
-                                    tiempo = temp_tiempo,
-                                    plazo = temp_plazo,
-                                    valor = temp_valor,  
-                                    usuario = temp_usuario
+                                    formaPago=FormaPago(id=temp_formaPago),
+                                    facturaid=FacturaCabecera(
+                                        id=serializer.data["id"]),
+                                    tiempo=temp_tiempo,
+                                    plazo=temp_plazo,
+                                    valor=temp_valor,
+                                    usuario=temp_usuario
                                 )
-                                
-                                res = FormaPagoFactura.create(forma_pago_factura)
+
+                                res = FormaPagoFactura.create(
+                                    forma_pago_factura)
                                 print("registrado forma de pago factura ", str(res))
                             #tam_forma_pagos_factura =  len(data_forma_pagos_factura)
-                            
-                            
+
                             data_otros_factura = request.data["otro_factura"]
-                            
+
                             for otro in data_otros_factura:
                                 tem_nombre = otro["nombre"]
                                 tem_descripcion = otro["descripcion"]
                                 tem_factura = serializer.data["id"]
-                                
+
                                 otro_factura = Otro(
-                                    nombre = tem_nombre,
-                                    descripcion = tem_descripcion,
-                                    factura = FacturaCabecera(id=tem_factura)
+                                    nombre=tem_nombre,
+                                    descripcion=tem_descripcion,
+                                    factura=FacturaCabecera(id=tem_factura)
                                 )
-                                res  = Otro.create(otro_factura)
-                                print("Registrado otro factura ",str(res))
-                                
+                                res = Otro.create(otro_factura)
+                                print("Registrado otro factura ", str(res))
+
                             #tam_otros_factura = len(data_otros_factura)
-                            
-                            
+
                             return Response(serializer.data, status=status.HTTP_201_CREATED)
                     else:
-                        return Response({"Error":"Formato invalido. "},status.HTTP_400_BAD_REQUEST)
+                        return Response({"Error": "Formato invalido. "}, status.HTTP_400_BAD_REQUEST)
                 else:
                     return Response(status.HTTP_401_UNAUTHORIZED)
         except IntegrityError:
-            return Response({"Error":"Error de integridad"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"Error": "Error de integridad"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except BaseException as ex:
             return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -1020,9 +1021,9 @@ class FacturDetalleViews(LoginRequiredMixin, APIView):
                 descuento=request.data["descuento"],
                 ice=request.data["ice"],
                 valorTotal=request.data["valorTotal"],
-                irbpnr= request.data["irbpnr"],
-                factura= FacturaCabecera(id=request.data["factura"]),
-                producto= Producto(id=request.data["producto"]),
+                irbpnr=request.data["irbpnr"],
+                factura=FacturaCabecera(id=request.data["factura"]),
+                producto=Producto(id=request.data["producto"]),
                 usuario=request.user
             )
             res = FacturaDetalle.update(detalle)
@@ -1060,75 +1061,128 @@ class NotaDebitoView(LoginRequiredMixin, APIView):
     def post(self, request, format=json):
         if request.user.is_authenticated:
             serializer = NotaDebitoSerializer(data=request.data)
-            if serializer.is_valid():
-                nota_debito = NotaDebito.objects.filter(
-                    establecimiento=request.data["establecimiento"], puntoEmision=request.data["puntoEmision"], secuencia=request.data["secuencia"])
-                if len(nota_debito) > 0:
-                    return Response({"Error":"Este documento ya esta registrado."}, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    serializer.save()
-                    return Response(status=status.HTTP_200_OK)
+            try:
+                with transaction.atomic():
+                    if serializer.is_valid():
+                        nota_debito = NotaDebito.objects.filter(
+                            establecimiento=request.data["establecimiento"], puntoEmision=request.data["puntoEmision"], secuencia=request.data["secuencia"])
+                        if len(nota_debito) > 0:
+                            return Response({"Error": "Este documento ya esta registrado."}, status=status.HTTP_400_BAD_REQUEST)
+                        else:
+                            serializer.save()
+
+                            pagos = []
+                            for pago in request.data["forma_pago_debito"]:
+                                fpagond = FormaPagoNotaDebito(
+                                    nota_debito=NotaDebito(
+                                        serializer.data["id"]),
+                                    forma_pago=FormaPago(
+                                        id=pago["forma_pago"]),
+                                    plazo=pago["plazo"],
+                                    valor=pago["valor"],
+                                    usuario=request.user
+                                )
+                                fpagond.save()
+                                pagos.append(fpagond)
+                                print("Forma de pago guardada.")
+                            serializer_pagos = FormaPagoSerializer(data=pagos)
+                            serializer.data["forma_pago_debito"] = serializer_pagos
+                            otros = []
+                            for otro in request.data["odc_nota_debito"]:
+                                nombre = otro["nombre"]
+                                descripcion = otro["descripcion"]
+
+                                otrondnc = OtroNDNC(
+                                    nombre=nombre,
+                                    descripcion=descripcion,
+                                    notaDebito=NotaDebito(
+                                        id=serializer.data["id"]),
+                                    usuario=request.user
+                                )
+                                resp = OtroNDNC.create(otrondnc)
+                                print("resp ", resp)
+
+                                if type(resp) == int:
+                                    otros.append(otro)
+                                    print("otros guardado nota de debito")
+                            serializer_otro = OtroNDNCSerializer(data=otros)
+                            serializer.data["odc_nota_debito"] = serializer_otro
+
+                            return Response(serializer.data, status=status.HTTP_200_OK)
+            except IntegrityError as ex:
+                return Response({}, status)
             else:
-                return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     @action(detail=False, method="PUT")
     def put(self, request, format=json):
         if request.user.is_authenticated:
-            serializer = NotaDebito(data=request.data)
-            if serializer.is_valid():
-                nota_debito = NotaDebito(
-                    id=request.data["id"],
-                    establecimiento=request.data["establecimiento"],
-                    puntoEmision=request.data["puntoEmision"],
-                    secuencia=request.data["secuencia"],
-                    autorizacion=request.data["autorizacion"],
-                    claveacceso=request.data["claveacceso"],
-                    fecha=request.data["fecha"],
-                    comprobanteModificado=request.data["comprobanteModificado"],
-                    establecimientoDoc=request.data["establecimientoDoc"],
-                    puntoEmisionDoc=request.data["puntoEmisionDoc"],
-                    secuenciaDoc=request.data["secuenciaDoc"],
-                    tarifa0=request.data["tarifa0"],
-                    tarifadif0=request.data["tarifadif0"],
-                    noObjetoIva=request.data["noObjetoIva"],
-                    excento=request.data["excento"],
-                    valorIce=request.data["valorIce"],
-                    iva=request.data["iva"],
-                    total=request.data["total"],
-                    estado=request.data["estado"],
-                    emisor=request.data["emisor"],
-                    cliente=request.data["cliente"],
-                    usuario=request.data["usuario"]
-                )
-                res = NotaDebito.update(nota_debito)
-                if res == True:
-                    return Response(status=status.HTTP_200_OK)
+            try:
+                serializer = NotaDebitoSerializer(data=request.data)
+                if serializer.is_valid():
+                    nota_debito = NotaDebito(
+                        id=request.data["id"],
+                        establecimiento=Establecimiento(
+                            id=request.data["establecimiento"]),
+                        puntoEmision=PuntoEmision(
+                            id=request.data["puntoEmision"]),
+                        secuencia=request.data["secuencia"],
+                        autorizacion=request.data["autorizacion"],
+                        claveacceso=request.data["claveacceso"],
+                        fecha=request.data["fecha"],
+                        comprobanteModificado=request.data["comprobanteModificado"],
+                        establecimientoDoc=request.data["establecimientoDoc"],
+                        puntoEmisionDoc=request.data["puntoEmisionDoc"],
+                        secuenciaDoc=request.data["secuenciaDoc"],
+                        tarifa0=request.data["tarifa0"],
+                        tarifadif0=request.data["tarifadif0"],
+                        noObjetoIva=request.data["noObjetoIva"],
+                        excento=request.data["excento"],
+                        valorIce=request.data["valorIce"],
+                        iva=request.data["iva"],
+                        total=request.data["total"],
+                        estado=request.data["estado"],
+                        emisor=Emisor(id=request.data["emisor"]),
+                        cliente=Cliente(id=request.data["cliente"]),
+                        usuario=request.user
+                    )
+                    res = NotaDebito.update(nota_debito)
+                    if res == True:
+                        return Response(status=status.HTTP_200_OK)
+                    else:
+                        return Response({"Error: ": str(res)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
-                    return Response({"Error: ": str(res)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                    return Response(status=status.HTTP_400_BAD_REQUEST)
+            except BaseException as ex:
+                return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     @action(detail=False, method="GET")
     def get(self, request, *args, pk):
         if request.user.is_authenticated:
-            nota_debito = NotaDebito.search_id(pk)
-            serializer = NotaDebitoSerializer(nota_debito, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            try:
+                nota_debito = NotaDebito.search_id(pk)
+                serializer = NotaDebitoSerializer(nota_debito, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except BaseException as ex:
+                return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     @action(detail=False, method="DELETE")
     def delete(self, request, *args, pk):
         if request.user.is_authenticated:
-            res = NotaDebito.remove(pk)
-            if res == True:
-                return Response(status=status.HTTP_200_OK)
-            else:
-                return Response({"Error: ": str(res)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            try:
+                res = NotaDebito.remove(pk)
+                if res == True:
+                    return Response(status=status.HTTP_200_OK)
+                else:
+                    return Response({"Error: ": str(res)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except BaseException as ex:
+                return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1178,19 +1232,21 @@ class OtroViews(LoginRequiredMixin, APIView):
         if request.user.is_authenticated:
             serializer = OtroSerializer(data=request.data)
             if serializer.is_valid():
+
                 otros = Otro.search(int(request.data["id"]))
                 if len(otros) > 0:
+                    id = request.data["id"]
                     otro = Otro(
-                        id=request.data["id"],
+                        id=id,
                         nombre=request.data["nombre"],
                         descripcion=request.data["descripcion"],
-                        factura=request.data["factura"]
+                        factura=FacturaCabecera(id=request.data["factura"])
                     )
                     res = Otro.update(otro)
                     if res == True:
                         return Response(status=status.HTTP_200_OK)
                     else:
-                        return Response({"Error": "No existe este item."}, status=status.HTTP_400_BAD_REQUEST)
+                        return Response({"Error": "Se ha generado un error "+str(res)}, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     return Response({"Error": "No se ha encontrado el item"}, status=status.HTTP_400_BAD_REQUEST)
             else:
@@ -1387,7 +1443,7 @@ class FormaPagoNotaDebitoView(LoginRequiredMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=json):
-        if request.user.is_valid():
+        if request.user.is_authenticated:
             serializer = FormaPagoNotaDebitoSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
@@ -1450,7 +1506,7 @@ class FormaPagoNDList(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.is_authenticated():
+        if self.request.user.is_authenticated:
             id_nota_debito = self.kwargs["id"]
             return FormaPagoNotaDebito.search_to_nota_debito(id_nota_debito)
         else:
@@ -1458,17 +1514,111 @@ class FormaPagoNDList(ListAPIView):
 
 
 class NotaCreditoView(LoginRequiredMixin, APIView):
+    """
+    API para crud de nota de credito.
+    """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=json):
-        if request.user.is_valid():
-            serializer = NotaCreditoSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+        if request.user.is_authenticated:
+            try:
+                with transaction.atomic():
+                    serializer = NotaCreditoSerializer(data=request.data)
+                    res = NotaCredito.objects.filter(emisor=request.data["emisor"], establecimiento=request.data[
+                                                     "establecimiento"], puntoEmision=request.data["puntoEmision"], secuencia=request.data["secuencia"])
+                    print('res ', res)
+                    if len(res) <= 0:
+                        if serializer.is_valid():
+                            serializer.save()
+                            details = []
+                            print("id serialized ", serializer.data["id"])
+                            print("detalle nota de credito ")
+                            try:
+                                for detail in request.data["detalle_nota_credito"]:
+                                    print("id nota de credito ",
+                                          serializer.data["id"])
+                                    cantidad_temp = detail["cantidad"]
+
+                                    valorUnitario_temp = detail["valorUnitario"]
+
+                                    descuento_temp = detail["ice"]
+
+                                    ice_temp = detail["ice"]
+
+                                    valorTotal_temp = detail["valorTotal"]
+
+                                    irbpnr_temp = detail["irbpnr"]
+
+                                    notaCredito_temp = NotaCredito(
+                                        id=serializer.data["id"])
+                                    print("notaCredito_temp ",
+                                          notaCredito_temp.id)
+
+                                    producto_temp = Producto(
+                                        id=detail["producto"])
+
+                                    print("Producto temp ", producto_temp)
+
+                                    usuario_temp = request.user
+                                    print("usuario_temp ", usuario_temp)
+
+                                    detnc = DetalleNC(
+                                        cantidad=cantidad_temp,
+                                        valorUnitario=valorUnitario_temp,
+                                        descuento=descuento_temp,
+                                        ice=ice_temp,
+                                        valorTotal=valorTotal_temp,
+                                        irbpnr=irbpnr_temp,
+                                        notaCredito=NotaCredito(
+                                            id=notaCredito_temp.id),
+                                        producto=Producto(id=producto_temp.id),
+                                        usuario=usuario_temp
+                                    )
+                                    print("detnc ", detnc.cantidad)
+
+                                    res = DetalleNC.create(detnc)
+
+                                    print("res ", res)
+                                    if type(res) == int:
+                                        detnc.id = res
+                                        print(detnc)
+                                        details.append(detnc)
+                                        print(
+                                            "detalle de nota de credito guardada")
+                                otros = []
+                                for otro in request.data["odc_nota_credit"]:
+                                    nombre = otro["nombre"]
+                                    descripcion = otro["descripcion"]
+                                    otrondnc = OtroNDNC(
+                                        nombre=nombre,
+                                        descripcion=descripcion,
+                                        notaCredito=NotaCredito(
+                                            id=serializer.data["id"]),
+                                        usuario=request.user
+                                    )
+                                    resp = OtroNDNC.create(otrondnc)
+
+                                    if type(resp) == int:
+                                        otros.append(otro)
+                                        print("otros guadado nota de credito")
+                                serializer.data["odc_nota_credit"] = otros
+
+                            except BaseException as ex:
+                                return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                            serData = DetalleNCSerializer(data=details)
+                            serializer.data["nota_credito"] = serData
+                            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                        else:
+                            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({"Error": "Ya existe un documento con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
+            except IntegrityError as integrity:
+                return Response({"Error": str(integrity)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            except BaseException as ex:
+                return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1478,8 +1628,9 @@ class NotaCreditoView(LoginRequiredMixin, APIView):
             if serializer.is_valid():
                 nota_credito = NotaCredito(
                     id=request.data["id"],
-                    establecimiento=request.data["establecimiento"],
-                    puntoEmision=request.data["puntoEmision"],
+                    establecimiento=Establecimiento(
+                        id=request.data["establecimiento"]),
+                    puntoEmision=PuntoEmision(id=request.data["puntoEmision"]),
                     secuencia=request.data["secuencia"],
                     autorizacion=request.data["autorizacion"],
                     claveacceso=request.data["claveacceso"],
@@ -1499,10 +1650,12 @@ class NotaCreditoView(LoginRequiredMixin, APIView):
                     iva=request.data["iva"],
                     total=request.data["total"],
                     estado=request.data["estado"],
-                    emisor=request.data["emisor"],
+                    emisor=Emisor(id=request.data["emisor"]),
+                    cliente=Cliente(id=request.data["cliente"]),
                     usuario=request.user
                 )
                 res = NotaCredito.update(nota_credito)
+                print("res ", res)
                 if res:
                     return Response(serializer.data, status=status.HTTP_200_OK)
                 else:
@@ -1537,17 +1690,21 @@ class NotaCreditoView(LoginRequiredMixin, APIView):
             return Response({"Error ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class NotaCreidotoRageEmisor(ListAPIView):
+class NotaCreditoRageEmisor(ListAPIView):
 
-    serialiezer_class = NotaCreditoSerializer
+    serializer_class = NotaCreditoSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
+            if self.request.user.is_authenticated:
                 emisor_id = self.kwargs["id_emisor"]
                 date_init = self.kwargs["date_start"]
                 date_end = self.kwargs["date_end"]
+
+                print("emisor_id ", emisor_id)
+                print("date_init ", date_init)
+                print("date_end ", date_end)
 
                 return NotaCredito.list_to_emisor_range(emisor_id, date_init, date_end)
             else:
@@ -1556,16 +1713,16 @@ class NotaCreidotoRageEmisor(ListAPIView):
             return Response({"Error ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class NotaCreidotoSearchSecuencia(ListAPIView):
+class NotaCredidotoSearchSecuencia(ListAPIView):
     """
     API para obtener una nota de credito por su secuencia.
     """
-    serialiezer_class = NotaCreditoSerializer
+    serializer_class = NotaCreditoSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
+            if self.request.user.is_authenticated:
                 id_emisor = self.kwargs["id_emisor"]
                 est = self.kwargs["establecimiento"]
                 p_emi = self.kwargs["p_emision"]
@@ -1583,13 +1740,13 @@ class OtroNDNCView(LoginRequiredMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=json):
-        if request.user.is_valid():
+        if request.user.is_authenticated:
             serializer = OtroNDNCSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1647,9 +1804,11 @@ class OtroNDNCListToNC(ListAPIView):
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
-                tipo_doc = self.kwrgs["tipo_doc"]
+            if self.request.user.is_authenticated:
+                tipo_doc = self.kwargs["tipo_doc"]
+
                 id = self.kwargs["id_doc"]
+
                 if tipo_doc == 1:
                     # Para listar los otros de las notas de credito.
                     return OtroNDNC.list_to_nc(id)
@@ -1689,8 +1848,8 @@ class DetalleNCView(LoginRequiredMixin, APIView):
                     ice=request.data["ice"],
                     valorTotal=request.data["valorTotal"],
                     irbpnr=request.data["irbpnr"],
-                    notaCredito=request.data["notaCredito"],
-                    producto=request.data["producto"],
+                    notaCredito=NotaCredito(id=request.data["notaCredito"]),
+                    producto=Producto(id=request.data["producto"]),
                     usuario=request.user
                 )
                 res = DetalleNC.update(detalle_nc)
@@ -1729,12 +1888,12 @@ class DetalleNCView(LoginRequiredMixin, APIView):
 
 
 class DetalleNCList(ListAPIView):
-    serializer_class = FormaPagoFacturaSerializer
+    serializer_class = DetalleNCSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
+            if self.request.user.is_authenticated:
                 id = self.kwargs["id_nc"]
                 return DetalleNC.list_to_nc(id)
             else:
@@ -1748,36 +1907,41 @@ class RetencionCodigoView(LoginRequiredMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=json):
-        if request.user.is_valid():
+        if request.user.is_authenticated:
             serializer = RetencionCodigoSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     def put(self, request, format=json):
         if request.user.is_authenticated:
-            serializer = RetencionCodigoSerializer(data=request.data)
-            if serializer.is_valid():
-                retencion = RetencionCodigo(
-                    id=request.data["id"],
-                    codigo=request.data["codigo"],
-                    porcentaje=request.data["porcentaje"],
-                    detalle=request.data["detalle"],
-                    tipo=request.data["tipo"],
-                    usuario=request.user
+            #serializer = RetencionCodigoSerializer(data=request.data)
+            try:
+                ret_temp = RetencionCodigo.objects.filter(
+                    codigo=request.data["codigo"])
+                if len(ret_temp) > 0 and ret_temp[0].id == request.data["id"]:
+                    retencion = RetencionCodigo(
+                        id=request.data["id"],
+                        codigo=request.data["codigo"],
+                        porcentaje=request.data["porcentaje"],
+                        detalle=request.data["detalle"],
+                        tipo=request.data["tipo"],
+                        usuario=request.user
 
-                )
-                res = RetencionCodigo.update(retencion)
-                if res:
-                    return Response(serializer.data, status=status.HTTP_200_OK)
+                    )
+                    res = RetencionCodigo.update(retencion)
+                    if res:
+                        return Response({"Datos actualizados."}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"Error": str(res)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
-                    return Response({"Error": str(res)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                return Response({"Error ": "Datos invalidos"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"Error": "Ya existe este código registrado."}, status=status.HTTP_400_BAD_REQUEST)
+            except BaseException as ex:
+                return Response({"Error ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({"Error ": "Acceso no autorizado."}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1813,7 +1977,7 @@ class RetencionCodigoGet(ListAPIView):
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
+            if self.request.user.is_authenticated:
                 codigo = self.kwargs["codigo"]
                 if codigo == "0":
                     return RetencionCodigo.list_all()
@@ -1830,13 +1994,48 @@ class RetencionView(LoginRequiredMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=json):
-        if request.user.is_valid():
-            serializer = RetencionSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+        if request.user.is_authenticated:
+            try:
+                with transaction.atomic():
+                    serializer = RetencionSerializer(data=request.data)
+                    if serializer.is_valid():
+                        if len(Retencion.objects.filter(
+                            emisor=request.data["emisor"],
+                            sujeto_retenido=request.data["sujeto_retenido"],
+                            establecimiento=request.data["establecimiento"],
+                            pemision=request.data["pemision"],
+                            secuencia=request.data['secuencia']
+                        )) <= 0:
+                            serializer.save()
+                            for retencion in request.data["retenciones_compra"]:
+                                baseImponible = retencion["baseImponible"]
+                                valor_retenido = retencion["valor_retenido"]
+                                retencion_codigo = RetencionCodigo(
+                                    id=retencion["retencion_codigo"])
+                                retencion = Retencion(id=serializer.data["id"])
+                                emisor = Emisor(id=serializer.data["emisor"])
+                                usuario = request.user
+
+                                result = RetencionCompra(
+                                    baseImponible=baseImponible,
+                                    valor_retenido=valor_retenido,
+                                    retencion=retencion,
+                                    retencion_codigo=retencion_codigo,
+                                    emisor=emisor,
+                                    usuario=usuario,
+                                )
+                                res = Retencion.create(result)
+                                print("Guardado ", res)
+
+                            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                        else:
+                            return Response({"Error": "Ya existe una retención con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response(status=status.HTTP_400_BAD_REQUEST)
+            except IntegrityError as integrity:
+                return Response({"Error": str(integrity)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except BaseException as ex:
+                return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1846,10 +2045,12 @@ class RetencionView(LoginRequiredMixin, APIView):
             if serializer.is_valid():
                 retencion = Retencion(
                     id=request.data["id"],
-                    emisor=request.data["emisor"],
-                    sujeto_retenido=request.data["sujeto_retenido"],
-                    establecimiento=request.data["establecimiento"],
-                    pemision=request.data["pemision"],
+                    emisor=Emisor(id=request.data["emisor"]),
+                    sujeto_retenido=Cliente(
+                        id=request.data["sujeto_retenido"]),
+                    establecimiento=Establecimiento(
+                        id=request.data["establecimiento"]),
+                    pemision=PuntoEmision(id=request.data["pemision"]),
                     secuencia=request.data["secuencia"],
                     fecha=request.data["fecha"],
                     tipo_documento=request.data["tipo_documento"],
@@ -1901,7 +2102,7 @@ class RetencionSecuencia(ListAPIView):
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
+            if self.request.user.is_authenticated:
                 id_emi = self.kwargs["id_emisor"]
                 est = self.kwargs["est"]
                 pemi = self.kwargs["pemi"]
@@ -1921,13 +2122,17 @@ class RetencionEmisorRange(ListAPIView):
 
     def get_queryset(self):
         try:
-            if self.request.user.is_authenticated():
+            if self.request.user.is_authenticated:
                 emisor_id = self.kwargs['emisor_id']
                 date_start = self.kwargs["date_start"]
                 date_end = self.kwargs["date_end"]
+                
                 return Retencion.list_to_emisor_range(emisor_id, date_start, date_end)
+            else:
+                return Response({"Error":"Acceso no autorizado."},status=status.HTTP_401_UNAUTHORIZED)
         except BaseException as ex:
-            return Response({"Error": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print("error ",ex)
+            return Response({"Error":str(ex)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class RetencionCompraView(LoginRequiredMixin, APIView):
@@ -1935,13 +2140,13 @@ class RetencionCompraView(LoginRequiredMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=json):
-        if request.user.is_valid():
+        if request.user.is_authenticated:
             serializer = RetencionCompraSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -1953,20 +2158,18 @@ class RetencionCompraView(LoginRequiredMixin, APIView):
                     id=request.data["id"],
                     baseImponible=request.data["baseImponible"],
                     valor_retenido=request.data["valor_retenido"],
-                    retencion=request.data["retencion"],
-                    retencion_codigo=request.data["retencion_codigo"],
-                    emisor=request.data["emisor"],
+                    retencion=Retencion(id=request.data["retencion"]),
+                    retencion_codigo=RetencionCodigo(id=request.data["retencion_codigo"]),
+                    emisor=Emisor(id=request.data["emisor"]),
                     usuario=request.user
                 )
-                self.perform_update(serializer)
-                #res = RetencionCompra.update(retencion)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-                '''
+                res = RetencionCompra.update(retencion)
+                
                 if res:
-                    return Response(serializer.data,status=status.HTTP_200_OK)
+                    return Response({"Datos actualizados."},status=status.HTTP_200_OK)
                 else:
                     return Response({"Error":str(res)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                '''
+                
             else:
                 return Response({"Error ": "Datos invalidos"}, status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -1975,7 +2178,10 @@ class RetencionCompraView(LoginRequiredMixin, APIView):
     def get(self, request, *args, pk):
         try:
             if request.user.is_authenticated:
+                #res = Retencion.search(pk)
+                #res = RetencionCompra.search_to_retencion(pk)
                 res = RetencionCompra.search(pk)
+                print("res ", res)
                 serializer = RetencionCompraSerializer(res, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
@@ -1995,3 +2201,18 @@ class RetencionCompraView(LoginRequiredMixin, APIView):
                 return Response(status=status.HTTP_401_UNAUTHORIZED)
         except BaseException as ex:
             return Response({"Error ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GenerateSecuenceDocument(LoginRequiredMixin, APIView):
+    
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args,**kwargs):
+        tipo_doc = self.kwargs["tipo_doc"]
+        id_emisor = self.kwargs["id_emisor"]
+        establecimiento = self.kwargs["establecimiento"]
+        p_emision = self.kwargs["p_emision"]
+        if (request.user.is_authenticated):
+            return Response({"SMS":"Serie generada. "}, status=status.HTTP_200_OK)
+        else:
+            return Response({"Error":"Serie generada. "}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

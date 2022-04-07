@@ -63,10 +63,63 @@ urlpatterns = [
     #NotaDebito
     path("nota_debito/", views.NotaDebitoView.as_view(), name ="nota_debito"),
     path("nota_debito/<int:pk>/", views.NotaDebitoView.as_view(), name ="nota_debito_pk"),
+    path("list_nota_debito_emisor_range/<int:id_emisor>/<str:start>/<str:end>/", views.ListNotaDebitoEmisorRange.as_view(), name ="list_nota_debito_range"),
     
     #Otro
     path("otro/", views.OtroViews.as_view(), name ="otro"),
     path("otro/<int:pk>/", views.OtroViews.as_view(), name ="otro"),
+    path("list_to_factura_otros/<int:id_factura>/", views.ListToFacturaOtros.as_view(), name ="list_to_factura_otros"),
+    
+    
+    #Formas de pagos Nota de debito.
+    path("forma_pago_nota_debito_view/", views.FormaPagoNotaDebitoView.as_view(), name ="forma_pago_nota_debito"),
+    path("forma_pago_nota_debito_view/<int:pk>/", views.FormaPagoNotaDebitoView.as_view(), name ="forma_pago_nota_debito_pk"),
+    path("forma_pagond_list/<int:id>/", views.FormaPagoNDList.as_view(), name ="forma_pagond_list"),
+    
+    
+    #Nota de creditos
+    path('nota_creditoview/', views.NotaCreditoView.as_view(), name ="nota_creditoview"),
+    path('nota_creditoview/<int:pk>/', views.NotaCreditoView.as_view(), name ="nota_creditoview_pk"),
+    path('list_nota_credito_range/<int:id_emisor>/<str:date_start>/<str:date_end>/', views.NotaCreditoRageEmisor.as_view(), name ="list_nota_credito_range"),
+    path('nota_credidoto_search_secuencia/<int:id_emisor>/<str:establecimiento>/<str:p_emision>/<int:secuencia>/', views.NotaCredidotoSearchSecuencia.as_view(), name="nota_credidoto_search_secuencia"),
+    
+    
+    #Otros Nota de debito o Nota de credito.
+    path("otro_ndncview/", views.OtroNDNCView.as_view(), name = "otro_ndncview"),
+    path("otro_ndncview/<int:pk>/", views.OtroNDNCView.as_view(), name = "otro_ndncview_pk"),
+    path('otrondnc_list_to_nc/<int:tipo_doc>/<int:id_doc>/', views.OtroNDNCListToNC.as_view(), name ="otrondnc_list_to_nc"),
+    
+    #Detalle nota de credito
+    path("detallencview/", views.DetalleNCView.as_view(), name ="detallencview"),
+    path("detallencview/<int:pk>/", views.DetalleNCView.as_view(), name ="detallencview_pk"),
+    path("detallenc_list/<int:id_nc>/", views.DetalleNCList.as_view(), name ="detallenc_pk"),
+    
+    #Retencion Codigos
+    path("retencion_codigo/", views.RetencionCodigoView.as_view(), name ="retencioncodigo"),
+    path("retencion_codigo/<int:pk>/", views.RetencionCodigoView.as_view(), name ="retencioncodigo_pk"),
+    path("retencion_codigo_get/<str:codigo>/", views.RetencionCodigoGet.as_view(), name ="retencioncodigo_get"),
+    
+    #Retencion
+    path("retencion/", views.RetencionView.as_view(), name ="retencion"),
+    path("retencion/<int:pk>/", views.RetencionView.as_view(), name ="retencion_pk"),
+    path("retencion_secuencia/<int:id_emisor>/<str:est>/<str:pemi>/<int:secuencia>/", views.RetencionSecuencia.as_view(), name ="retencion_secuencia"),
+    path("retencion_emisor_range/<int:emisor_id>/<str:date_start>/<str:date_end>/", views.RetencionEmisorRange.as_view(), name ="retencion_emisor_range"),
+    
+    
+    #Retencion de compras.
+    path("retencion_compra/", views.RetencionCompraView.as_view(), name ="retencion_compra"),
+    path("retencion_compra/<int:pk>/", views.RetencionCompraView.as_view(), name ="retencion_compra_pk"),
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
 ]

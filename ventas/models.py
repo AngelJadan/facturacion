@@ -345,7 +345,7 @@ class Cliente(models.Model):
         Emisor, db_column="cli_emisor", on_delete=models.PROTECT, verbose_name="Emisor")
 
     def __str__(self):
-        return str(self.id)
+        return f'{self.identificacion}'
 
     class Meta:
         verbose_name = "Cliente"
@@ -354,7 +354,7 @@ class Cliente(models.Model):
     def create(cliente):
         try:
             cliente.save()
-            return cliente._id
+            return cliente.id
         except BaseException as ex:
             return ex
 
@@ -814,7 +814,7 @@ class NotaDebito(models.Model):
 
     def search_id(id=int):
         try:
-            return NotaDebito.objects.filter(_id=id)
+            return NotaDebito.objects.filter(id=id)
         except BaseException as ex:
             return ex
 
@@ -826,8 +826,9 @@ class NotaDebito(models.Model):
         emisor_id: Id del emisor de la nota de debito.
         """
         try:
-            return NotaDebito.objects.filter(_establecimiento=estab, _puntoEmision=p_emi, _secuencia=sec, _emisor=emisor_id)
+            return NotaDebito.objects.filter(establecimiento=estab, puntoEmision=p_emi, secuencia=sec, emisor=emisor_id)
         except BaseException as ex:
+            print("Error %fe")
             return ex
 
     def update(notadebito):
@@ -847,6 +848,7 @@ class NotaDebito(models.Model):
 
     def list_to_emisor(emisor_id=int, start=str, end=str):
         try:
+            print(" id emisor ",emisor_id ," start ", start," end ",end)
             return NotaDebito.objects.filter(emisor=emisor_id, fecha__range=[start, end])
         except BaseException as ex:
             return ex
@@ -877,7 +879,7 @@ class Otro(models.Model):
             return ex
     def update(otro):
         try:
-            Otro.objects.filter(id=id).update(nombre=otro.nombre, 
+            Otro.objects.filter(id=otro.id).update(nombre=otro.nombre, 
                                                      descripcion=otro.descripcion,
                                                      factura=otro.factura)
             return True
@@ -1013,7 +1015,7 @@ class FormaPagoFactura(models.Model):
     
 class FormaPagoNotaDebito(models.Model):
     id = models.AutoField(db_column="fpn", primary_key=True, verbose_name="Id")
-    nota_debito = models.ForeignKey(NotaDebito, db_column="fpn_nota_debito", on_delete=models.PROTECT)
+    nota_debito = models.ForeignKey(NotaDebito, related_name="forma_pago_debito", db_column="fpn_nota_debito", on_delete=models.PROTECT)
     forma_pago = models.ForeignKey(FormaPago, db_column="fpn_forma_pago", on_delete=models.PROTECT)
     plazo = models.IntegerField(db_column="fpn_plazo", null=True, blank=True, verbose_name = "Plazo")
     valor = models.FloatField(db_column="fpn_valor", null=True, blank=True, verbose_name="Valor")
@@ -1069,7 +1071,7 @@ class NotaCredito(models.Model):
     COMPROBANTES = (
         ("01", "Factura"),
     )
-    ESTADOS = (("1", "Emitido"),
+    ESTADOS = (("1", "Generado"),
                ("2", "Anulado"))
 
     id = models.AutoField(db_column="ncr_id", primary_key=True)
@@ -1117,6 +1119,8 @@ class NotaCredito(models.Model):
                               blank=False, default="1", choices=ESTADOS, verbose_name="Estado")
     emisor = models.ForeignKey(
         Emisor, db_column="ncr_emisor", on_delete=models.PROTECT, verbose_name="Emisor")
+    cliente = models.ForeignKey(
+        Cliente, db_column="ncr_cliente", on_delete=models.PROTECT, verbose_name = "Cliente", default =1 )
     usuario = models.ForeignKey(
         User, db_column="ncr_usuario", on_delete=models.PROTECT, verbose_name="Usuario")
 
@@ -1130,11 +1134,11 @@ class NotaCredito(models.Model):
     def create(nota_credito):
         nc = None
         try:
-            nc = NotaCredito.objects.filter(_establecimiento=nota_credito.establecimiento,
-                                            _puntoEmision=nota_credito.puntoEmision, _secuencia=nota_credito.secuencia, _emisor=nota_credito.emisor)
+            nc = NotaCredito.objects.filter(establecimiento=nota_credito.establecimiento,
+                                            puntoEmision=nota_credito.puntoEmision, secuencia=nota_credito.secuencia, emisor=nota_credito.emisor)
             if nc == None:
                 nota_credito.save()
-                return nota_credito._id
+                return nota_credito.id
             else:
                 return None
         except BaseException as ex:
@@ -1146,12 +1150,12 @@ class NotaCredito(models.Model):
         except BaseException as ex:
             return ex
 
-    def search_to_serie(emisor_id=int, establecimiento=str, p_emision=str, secuencia=str):
+    def search_to_serie(emisor_id=int, establecimiento=str, p_emision=str, secu=int):
         try:
             est = Establecimiento.objects.get(serie=establecimiento)
             p_emi = PuntoEmision.objects.get(
                 serie=p_emision, establecimiento=est.id)
-            return NotaCredito.objects.filter(establecimiento=est.id, puntoEmision=p_emi._id, emisor=emisor_id, secuencia=secuencia)
+            return NotaCredito.objects.filter(establecimiento=est.id, puntoEmision=p_emi.id, emisor=emisor_id, secuencia=secu)
         except BaseException as ex:
             return ex
         
@@ -1187,12 +1191,15 @@ class NotaCredito(models.Model):
                 total=nota_credito.total,
                 estado=nota_credito.estado,
                 emisor=nota_credito.emisor,
+                cliente=nota_credito.cliente,
                 usuario=nota_credito.usuario)
+            return True
         except BaseException as ex:
             return ex
 
     def list_to_emisor_range(emisor_id, start, end):
         try:
+            print("filtering...")
             return NotaCredito.objects.filter(emisor=emisor_id, fecha__range=[start, end])
         except BaseException as ex:
             return ex
@@ -1206,11 +1213,11 @@ class OtroNDNC(models.Model):
     descripcion = models.CharField(db_column="odc_descripcion", max_length=255,
                                    null=True, blank=True, default="", verbose_name="Descripcion")
     notaDebito = models.ForeignKey(
-        NotaDebito, db_column="odc_nota_debito", on_delete=models.CASCADE, verbose_name="Nota de debito")
+        NotaDebito, db_column="odc_nota_debito", related_name='odc_nota_debito', on_delete=models.CASCADE, verbose_name="Nota de debito", null=True)
     notaCredito = models.ForeignKey(
-        NotaCredito, db_column="odc_nota_credit", on_delete=models.CASCADE, verbose_name="Nota de crédito")
+        NotaCredito, db_column="odc_nota_credit", related_name='odc_nota_credit', on_delete=models.CASCADE, verbose_name="Nota de crédito", null=True)
     usuario = models.ForeignKey(
-        User, db_column="odc_usuario", on_delete=models.CASCADE, verbose_name="Usuario")
+        User, db_column="odc_usuario", on_delete=models.PROTECT, verbose_name="Usuario")
 
     def __str__(self):
         return str(self.id)
@@ -1228,7 +1235,7 @@ class OtroNDNC(models.Model):
 
     def search(id=int):
         try:
-            return OtroNDNC.objects.get(id=id)
+            return OtroNDNC.objects.filter(id=id)
         except BaseException as ex:
             return ex
 
@@ -1274,9 +1281,9 @@ class DetalleNC(models.Model):
     irbpnr = models.FloatField(
         db_column="dnc_irbpnr", null=False, blank=False, default=0.00, verbose_name="IRBPNR")
     notaCredito = models.ForeignKey(
-        NotaCredito, db_column="dnc_nota_credito", on_delete=models.CASCADE, verbose_name="Nota de crédito")
+        NotaCredito, related_name="detalle_nota_credito", db_column="dnc_nota_credito", on_delete=models.CASCADE, verbose_name="Nota de crédito")
     producto = models.ForeignKey(
-        Producto, db_column="dnc_producto", on_delete=models.CASCADE, verbose_name="Producto")
+        Producto, related_name="producto_nota_credito", db_column="dnc_producto", on_delete=models.CASCADE, verbose_name="Producto")
     usuario = models.ForeignKey(
         User, db_column="dnc_usuario", on_delete=models.CASCADE, verbose_name="Usuario")
 
@@ -1288,10 +1295,12 @@ class DetalleNC(models.Model):
         verbose_name_plural = "Detalles Nota de crédito"
 
     def create(detalle_nc):
+        print("data recebive ",detalle_nc)
         try:
             detalle_nc.save()
             return detalle_nc.id
         except BaseException as ex:
+            print("Error create detail nc ",ex)
             return ex
 
     def search(id=int):
@@ -1317,21 +1326,27 @@ class DetalleNC(models.Model):
 
     def list_to_nc(nc_id=int):
         try:
-            return DetalleNC.objects.filter(_notaCredito=nc_id)
+            return DetalleNC.objects.filter(notaCredito=nc_id)
         except BaseException as ex:
             return ex
 
 
 class RetencionCodigo(models.Model):
+    
+    TYPE = (
+        ("iva","I. V. A."),
+        ("renta","Renta")
+    )
+    
     id = models.AutoField(
         db_column="rco_id", primary_key=True, verbose_name="Id")
     codigo = models.CharField(
-        db_column="rco_codigo", max_length=20, null=False, blank=False, verbose_name="Código")
+        db_column="rco_codigo", max_length=20, unique=True, null=False, blank=False, verbose_name="Código")
     porcentaje = models.FloatField(
         db_column="rco_porcentaje", null=False, blank=False, verbose_name="Porcentaje")
     detalle = models.CharField(db_column="rco_detalle", max_length=255,
                                null=False, blank=False, default="sn", verbose_name="Detalle")
-    tipo = models.CharField(db_column="rco_tipo", max_length=20,
+    tipo = models.CharField(db_column="rco_tipo", max_length=20, choices=TYPE,
                             null=False, blank=False, verbose_name="Tipo")
     usuario = models.ForeignKey(User,
                                 db_column="rco_usuario", on_delete=models.PROTECT, verbose_name="Usuario")
@@ -1365,6 +1380,7 @@ class RetencionCodigo(models.Model):
     def remove(id=int):
         try:
             RetencionCodigo.objects.filter(id=id).delete()
+            return True
         except BaseException as ex:
             return ex
 
@@ -1397,8 +1413,8 @@ class Retencion(models.Model):
         Establecimiento, db_column="ret_establecimiento", on_delete=models.PROTECT, verbose_name="Establecimiento")
     pemision = models.ForeignKey(PuntoEmision, db_column="ret_pemision",
                                  on_delete=models.PROTECT, verbose_name="Punto de emisión")
-    secuencia = models.CharField(
-        db_column="ret_secuencia", max_length=9, null=False, blank=False, verbose_name="Secuencia")
+    secuencia = models.IntegerField(
+        db_column="ret_secuencia", null=False, blank=False, verbose_name="Secuencia")
     fecha = models.DateField(db_column="ret_fecha",
                              null=False, blank=False, verbose_name="Fecha")
     tipo_documento = models.CharField(db_column="ret_tipo_doc", max_length=50,
@@ -1440,11 +1456,11 @@ class Retencion(models.Model):
 
     def search(id=int):
         try:
-            return Retencion.objects.get(id=id)
+            return Retencion.objects.filter(id=id)
         except BaseException as ex:
             return ex
 
-    def search_to_secuencia(emisor_id=int, establecimiento=str, p_emision=str, secuencia=str):
+    def search_to_secuencia(emisor_id=int, establecimiento=str, p_emision=str, secuencia=int):
         try:
             est = Establecimiento.objects.get(serie=establecimiento)
             pemi = None
@@ -1475,7 +1491,7 @@ class RetencionCompra(models.Model):
     valor_retenido = models.FloatField(
         db_column="rcp_valor_retenido", null=False, blank=False, default=0.00, verbose_name="Valor retenido")
     retencion = models.ForeignKey(
-        Retencion, db_column="rcp_retencion", on_delete=models.PROTECT, verbose_name="Retención")
+        Retencion, related_name="retenciones_compra", db_column="rcp_retencion", on_delete=models.PROTECT, verbose_name="Retención")
     retencion_codigo = models.ForeignKey(
         RetencionCodigo, db_column="rcp_retencion_codigo", on_delete=models.PROTECT, verbose_name="Código de retención")
     emisor = models.ForeignKey(
@@ -1536,3 +1552,5 @@ class RetencionCompra(models.Model):
             return RetencionCompra.objects.filter(emisor=emisor_id)
         except BaseException as ex:
             return ex
+
+

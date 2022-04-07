@@ -277,6 +277,7 @@ class FacturaCabeceraSerializer(serializers.ModelSerializer):
         
 class FormaPagoNotaDebitoSerializer(serializers.ModelSerializer):
     class Meta:
+        
         model = FormaPagoNotaDebito
         fields = (
             "id",
@@ -286,8 +287,23 @@ class FormaPagoNotaDebitoSerializer(serializers.ModelSerializer):
             "valor",
             "usuario"            
         )
+        
+class OtroNDNCSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OtroNDNC
+        fields = (
+            "id",
+            "nombre",
+            "descripcion",
+            "notaDebito",
+            "notaCredito",
+            "usuario"
+        )
+
 
 class NotaDebitoSerializer(serializers.ModelSerializer):
+    forma_pago_debito = FormaPagoNotaDebitoSerializer(many=True, read_only=True)
+    odc_nota_debito = OtroNDNCSerializer(many=True, read_only=True)
     class Meta:
         model = NotaDebito
         fields = (
@@ -313,12 +329,31 @@ class NotaDebitoSerializer(serializers.ModelSerializer):
             "emisor",
             "cliente",
             "usuario",
+            "forma_pago_debito",
+            "odc_nota_debito"
         )
 
 
+class DetalleNCSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DetalleNC
+        fields = (
+            "id",
+            "cantidad",
+            "valorUnitario",
+            "descuento",
+            "ice",
+            "valorTotal",
+            "irbpnr",
+            "notaCredito",
+            "producto",
+            "usuario",
+        )
 
 
 class NotaCreditoSerializer(serializers.ModelSerializer):
+    detalle_nota_credito = DetalleNCSerializer(many=True, read_only=True)
+    odc_nota_credit = OtroNDNCSerializer(many=True, read_only=True)
     class Meta:
         model = NotaCredito
         fields = (
@@ -345,38 +380,12 @@ class NotaCreditoSerializer(serializers.ModelSerializer):
             "total",
             "estado",
             "emisor",
+            "cliente",
             "usuario",
+            "detalle_nota_credito",
+            "odc_nota_credit"
         )
 
-
-class OtroNDNCSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OtroNDNC
-        fields = (
-            "id",
-            "nombre",
-            "descripcion",
-            "notaDebito",
-            "notaCredito",
-            "usuario"
-        )
-
-
-class DetalleNCSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DetalleNC
-        fields = (
-            "id",
-            "cantidad",
-            "valorUnitario",
-            "descuento",
-            "ice",
-            "valorTotal",
-            "irbpnr",
-            "notaCredito",
-            "producto",
-            "usuario",
-        )
 
 
 class RetencionCodigoSerializer(serializers.ModelSerializer):
@@ -392,7 +401,23 @@ class RetencionCodigoSerializer(serializers.ModelSerializer):
         )
 
 
+class RetencionCompraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RetencionCompra
+        fields = (
+            "id",
+            "baseImponible",
+            "valor_retenido",
+            "retencion",
+            "retencion_codigo",
+            "emisor",
+            "usuario"
+        )
+
+
+
 class RetencionSerializer(serializers.ModelSerializer):
+    retenciones_compra = RetencionCompraSerializer(many=True, read_only=True)
     class Meta:
         model = Retencion
         fields = (
@@ -410,18 +435,7 @@ class RetencionSerializer(serializers.ModelSerializer):
             "autorizacion",
             "clave_acceso",
             "usuario",
+            "retenciones_compra"
         )
 
 
-class RetencionCompraSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RetencionCompra
-        fields = (
-            "id",
-            "baseImponible",
-            "valor_retenido",
-            "retencion",
-            "retencion_codigo",
-            "emisor",
-            "usuario",
-        )

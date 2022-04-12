@@ -4,6 +4,54 @@ from django.contrib.auth import password_validation, authenticate
 from rest_framework.authtoken.models import Token
 from rest_framework.validators import UniqueValidator
 
+
+
+def __validar_identificacion(identificacion = str, tipo=int):
+    total = 0
+    if tipo == 0: # cedula y r.u.c persona natural
+        base = 10
+        d_ver = int(identificacion[9])# digito verificador
+        multip = (2, 1, 2, 1, 2, 1, 2, 1, 2)
+    elif tipo == 1: # r.u.c. publicos
+        base = 11
+        d_ver = int(identificacion[8])
+        multip = (3, 2, 7, 6, 5, 4, 3, 2 )
+    elif tipo == 2: # r.u.c. juridicos y extranjeros sin cedula
+        base = 11
+        d_ver = int(identificacion[9])
+        multip = (4, 3, 2, 7, 6, 5, 4, 3, 2)
+    for i in range(0,len(multip)):
+        p = int(identificacion[i]) * multip[i]
+        if tipo == 0:
+            total+=p if p < 10 else int(str(p)[0])+int(str(p)[1])
+        else:
+            total+=p
+    mod = total % base
+    val = base - mod if mod != 0 else 0
+    return val == d_ver
+
+def verificar(identificacion = str):
+    l = len(identificacion)
+    if l == 10 or l == 13: # verificar la longitud correcta
+        cp = int(identificacion[0:2])
+        if cp >= 1 and cp <= 22: # verificar codigo de provincia
+            tercer_dig = int(identificacion[2])
+            if tercer_dig >= 0 and tercer_dig < 6 : # numeros enter 0 y 6
+                if l == 10:
+                    return __validar_identificacion(identificacion,0)                       
+                elif l == 13:
+                    return __validar_identificacion(identificacion,0) and identificacion[10:13] != '000' # se verifica q los ultimos numeros no sean 000
+            elif tercer_dig == 6:
+                return __validar_identificacion(identificacion,1) # sociedades publicas
+            elif tercer_dig == 9: # si es ruc
+                return __validar_identificacion(identificacion,2) # sociedades privadas
+            else:
+                raise Exception(u'Tercer digito invalido') 
+        else:
+            raise Exception(u'Codigo de provincia incorrecto') 
+    else:
+        raise Exception(u'Longitud incorrecta del numero ingresado')
+
 class UserModelSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -15,7 +63,6 @@ class UserModelSerializer(serializers.ModelSerializer):
             'last_name',
             'email',
         )
-
 
 class User_EmisorSerializer(serializers.ModelSerializer):
     
@@ -36,8 +83,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         max_length = 20,
         validators = [UniqueValidator(queryset=User.objects.all())],
     )
-    
-        
 
 class UserLoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
@@ -57,7 +102,6 @@ class UserLoginSerializer(serializers.ModelSerializer):
         token, created = Token.objects.get_or_create(user=self.context["user"])
         return self.context["user"], token.key
 
-
 class ChangePasswordSerializer(serializers.Serializer):
     model = User
 
@@ -70,7 +114,15 @@ class ChangePasswordSerializer(serializers.Serializer):
 class EmisorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Emisor
+        
+        def valid_tipo_identificacion(self):
+            if self['tipo_id'] == '01':
+                res = verificar(self['identificacion'])
+                if res == False:
+                    raise serializers.ValidationError('El número de RUC no es valido')
+                
         #fields = '__all__'
+        validators = [valid_tipo_identificacion]
         
         fields = (
             "id",
@@ -121,11 +173,21 @@ class PuntoEmisionSerializer(serializers.ModelSerializer):
             "usuario"
         )
 
-
-
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
+        
+        def valid_documento(self):
+            if self['tipoIdentificacion'] == "05":
+                res = verificar(self['identificacion'])
+                if res !=True:
+                    raise serializers.ValidationError("El número de cedula no es valido")
+            if self['tipoIdentificacion'] == "04":
+                res = verificar(self['identificacion'])
+                if res !=True:
+                    raise serializers.ValidationError("El número de RUC no es valido")
+        
+        validators = [valid_documento]
         fields = (
             "id",
             "nombreApellido",
@@ -140,40 +202,40 @@ class ClienteSerializer(serializers.ModelSerializer):
             "emisor"
         )
 
-
-class IvaSerializer(serializers.ModelSerializer):
+class ImpuestoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Iva
+        model = Impuesto
         fields = (
             "id",
-            "descripcion",
-            "porcentaje",
-            "user"
-        )
-
-
-class ProductoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Producto
-        fields = (
-            "id",
-            "nombre",
-            "codigoPrincipal",
-            "codigoAuxiliar",
             "tipo",
-            "ice",
-            "irbpnr",
-            "precio1",
-            "precio2",
-            "precio3",
-            "precio4",
-            "tipo_iva",
-            "valor_iva",
+            "codigo",
             "descripcion",
-            "emisor",
+            "usuario"
+        )
+        
+class ImpuestoProductoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImpuestoProducto
+        fields = (
+            "id",
+            "impuesto",
+            "producto",
             "usuario"
         )
 
+class ProductoSerializer(serializers.ModelSerializer):
+    producto_impuestos = ImpuestoProductoSerializer(many=True, read_only=True)
+    class Meta:
+        model = Producto
+        fields = '__all__'
+    
+    def create(self,validated_data):
+        details_data =  validated_data.pop('producto_impuestos')
+        producto = Producto.objects.create(**validated_data) # create the master reservation object
+        for producto_impuesto in details_data:
+            # create a details_reservation referencing the master reservation
+            ImpuestoProducto.objects.create(**producto_impuesto, producto=producto)
+        return producto
 
 class OtroSerializer(serializers.ModelSerializer):
     class Meta:
@@ -185,7 +247,6 @@ class OtroSerializer(serializers.ModelSerializer):
             "factura",
         )
 
-
 class FormaPagoSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormaPago
@@ -195,7 +256,6 @@ class FormaPagoSerializer(serializers.ModelSerializer):
             "descripcion",
             "usuario",
         )
-        
         
 class FormaPagoFacturaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -210,9 +270,21 @@ class FormaPagoFacturaSerializer(serializers.ModelSerializer):
             "usuario"
         )
 
+class ImpuestoDetalleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImpuestoDetalle
+        fields  = (
+            "id",
+            "codigoImpuesto",
+            "tarifa",
+            "baseImponible",
+            "valor",
+            "facturaDetalle"
+        )
 
 
 class FacturaDetalleSerializer(serializers.ModelSerializer):
+    detalle_impuestos = ImpuestoDetalleSerializer(many=True, read_only=True)
     class Meta:
         model = FacturaDetalle
         fields = (
@@ -220,15 +292,12 @@ class FacturaDetalleSerializer(serializers.ModelSerializer):
             "cantidad",
             "valorUnitario",
             "descuento",
-            "ice",
             "valorTotal",
-            "irbpnr",
             "factura",
             "producto",
-            "usuario"
+            "usuario",
+            "detalle_impuestos"
         )
-
-
 
 class FacturaCabeceraSerializer(serializers.ModelSerializer):
     #factura_detalle = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
@@ -255,25 +324,13 @@ class FacturaCabeceraSerializer(serializers.ModelSerializer):
             "establecimientoGuia",
             "puntoGuia",
             "secuenciaGuia",
-            "noobjetoiva",
-            "tarifa0",
-            "tarifadif0",
-            "excentoiva",
-            "totaldescuento",
-            "totalice",
-            "totalirbpnt",
-            "tipo_iva",
-            "valor_iva",
             "propina",
-            "total",
             "estado",
             "usuario",
             "factura_detalle",
             "forma_pago_factura",
             "otro_factura"
         )
-
-    
         
 class FormaPagoNotaDebitoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -299,7 +356,6 @@ class OtroNDNCSerializer(serializers.ModelSerializer):
             "notaCredito",
             "usuario"
         )
-
 
 class NotaDebitoSerializer(serializers.ModelSerializer):
     forma_pago_debito = FormaPagoNotaDebitoSerializer(many=True, read_only=True)
@@ -333,7 +389,6 @@ class NotaDebitoSerializer(serializers.ModelSerializer):
             "odc_nota_debito"
         )
 
-
 class DetalleNCSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetalleNC
@@ -349,7 +404,6 @@ class DetalleNCSerializer(serializers.ModelSerializer):
             "producto",
             "usuario",
         )
-
 
 class NotaCreditoSerializer(serializers.ModelSerializer):
     detalle_nota_credito = DetalleNCSerializer(many=True, read_only=True)
@@ -386,8 +440,6 @@ class NotaCreditoSerializer(serializers.ModelSerializer):
             "odc_nota_credit"
         )
 
-
-
 class RetencionCodigoSerializer(serializers.ModelSerializer):
     class Meta:
         model = RetencionCodigo
@@ -399,7 +451,6 @@ class RetencionCodigoSerializer(serializers.ModelSerializer):
             "tipo",
             "usuario",
         )
-
 
 class RetencionCompraSerializer(serializers.ModelSerializer):
     class Meta:
@@ -413,8 +464,6 @@ class RetencionCompraSerializer(serializers.ModelSerializer):
             "emisor",
             "usuario"
         )
-
-
 
 class RetencionSerializer(serializers.ModelSerializer):
     retenciones_compra = RetencionCompraSerializer(many=True, read_only=True)

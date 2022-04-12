@@ -78,6 +78,16 @@ class IvaAdmin(admin.ModelAdmin):
             "user"
         )
     
+
+class ImpuestoAdmin(admin.ModelAdmin):
+        list_display = (
+                "id",
+                "tipo",
+                "codigo",
+                "descripcion",
+                "usuario"
+        )
+
 class ProductoAdmin(admin.ModelAdmin):
     list_display = (
             "id",
@@ -85,17 +95,21 @@ class ProductoAdmin(admin.ModelAdmin):
             "codigoPrincipal",
             "codigoAuxiliar",
             "tipo",
-            "ice",
-            "irbpnr",
             "precio1",
             "precio2",
             "precio3",
             "precio4",
-            "tipo_iva",
-            "valor_iva",
             "descripcion",
             "emisor",
             "usuario"
+        )
+
+class ImpuestoProductoAdmin(admin.ModelAdmin):
+        list_display = (
+                "id",
+                "impuesto",
+                "producto",
+                "usuario"
         )
     
 class FacturaCabeceraAdmin(admin.ModelAdmin):
@@ -112,34 +126,32 @@ class FacturaCabeceraAdmin(admin.ModelAdmin):
             "establecimientoGuia",
             "puntoGuia",
             "secuenciaGuia",
-            "noobjetoiva",
-            "tarifa0",
-            "tarifadif0",
-            "excentoiva",
-            "totaldescuento",
-            "totalice",
-            "totalirbpnt",
-            "tipo_iva",
-            "valor_iva",            
             "propina",
-            "total",
             "estado",
-            "usuario",
+            "usuario"
         )
     
-    
+   
 class FacturaDetalleAdmin(admin.ModelAdmin):
     list_display = (
             "id",
             "cantidad",
             "valorUnitario",
             "descuento",
-            "ice",
             "valorTotal",
-            "irbpnr",
             "factura",
             "producto",
             "usuario"
+        )
+    
+class ImpuestoDetalleAdmin(admin.ModelAdmin):
+        list_display = (
+                "id",
+                "codigoImpuesto",
+                "tarifa",
+                "baseImponible",
+                "valor",
+                "facturaDetalle"
         )
     
 class NotaDebitoAdmin(admin.ModelAdmin):
@@ -304,10 +316,12 @@ admin.site.register(User_Emisor, User_EmisorAdmin)
 admin.site.register(Establecimiento, EstablecimientoAdmin)
 admin.site.register(PuntoEmision, PuntoEmisionAdmin)
 admin.site.register(Cliente, ClienteAdmin)
-admin.site.register(Iva,IvaAdmin)
+admin.site.register(Impuesto,ImpuestoAdmin)
 admin.site.register(Producto, ProductoAdmin)
+admin.site.register(ImpuestoProducto, ImpuestoProductoAdmin)
 admin.site.register(FacturaCabecera, FacturaCabeceraAdmin)
 admin.site.register(FacturaDetalle, FacturaDetalleAdmin)
+admin.site.register(ImpuestoDetalle,ImpuestoDetalleAdmin)
 admin.site.register(NotaDebito, NotaDebitoAdmin)
 admin.site.register(Otro, OtroAdmin)
 admin.site.register(FormaPago, FormaPagoAdmin)

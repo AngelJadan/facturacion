@@ -28,10 +28,6 @@ urlpatterns = [
     path('cliente/<int:pk>/', views.ClienteViews.as_view(), name="cliente_emisor_id"), #Para obtener un cliente por su id
     path('cliente_to_emisor/<int:pk>/', views.ListClienteToEmisor.as_view(), name="cliente_to_emisor"),#Para listar los clientes de  un emisor (GET)
     
-    #Iva
-    path("iva/",views.IvaViews.as_view(), name="iva"),#Para crear(POST) y actualizar(PUT) el iva
-    path("iva/<int:pk>/", views.IvaViews.as_view(), name="iva_pk"),#Para obtener y listar un iva.
-    path("iva/list/", views.ListIva.as_view(), name="iva_list"),#Para listar todos los ivas
     
     #Producto
     path("producto/",views.ProductoViews.as_view(), name ="producto"),

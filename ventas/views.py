@@ -5,7 +5,7 @@ from distutils.log import error
 import json
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from facturacion.serializer import ChangePasswordSerializer, ClienteSerializer, DetalleNCSerializer, EmisorSerializer, EstablecimientoSerializer, FacturaCabeceraSerializer, FacturaDetalleSerializer, FormaPagoFacturaSerializer, FormaPagoNotaDebitoSerializer, FormaPagoSerializer, IvaSerializer, NotaCreditoSerializer, NotaDebitoSerializer, OtroNDNCSerializer, OtroSerializer, ProductoSerializer, PuntoEmisionSerializer, RetencionCodigoSerializer, RetencionCompraSerializer, RetencionSerializer, UserLoginSerializer, UserModelSerializer
+from facturacion.serializer import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -499,7 +499,7 @@ class ClienteViews(LoginRequiredMixin, APIView):
                     else:
                         return Response({"Error: ": "El cliente ya se encuentra registrado."}, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response(status=status.HTTP_400_BAD_REQUEST)
+                    return Response(serializers.errors ,status=status.HTTP_400_BAD_REQUEST)
             except BaseException as ex:
                 return Response({"Error: ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
@@ -581,92 +581,6 @@ class ListClienteToEmisor(ListAPIView):
             return Response({"Error: ": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Web service IVA.
-class IvaViews(LoginRequiredMixin, APIView):
-    """
-    API para crud del iva.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=False, method="POST")
-    def post(self, request, format=None):
-        try:
-            if request.user.is_authenticated:
-                serializer = IvaSerializer(data=request.data)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-                else:
-                    return Response(status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(status=status.HTTP_401_UNAUTHORIZED)
-        except BaseException as ex:
-            return Response({"Error: ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, method="PUT")
-    def put(self, request, format=json):
-        try:
-            if request.user.is_authenticated:
-                serializer = IvaSerializer(data=request.data)
-                if serializer.is_valid:
-                    id_iva = request.data["id"]
-                    iva = None
-                    try:
-                        iva = Iva.objects.get(id=id_iva)
-                        print("iva ", iva)
-                        if iva != None:
-                            iva_temp = Iva(id=request.data["id"], descripcion=request.data["descripcion"],
-                                           porcentaje=request.data["porcentaje"], user=request.user)
-                            resp = Iva.update(iva_temp)
-                            if resp == True:
-                                return Response(status=status.HTTP_200_OK)
-                            else:
-                                return Response({"Error: ": str(resp)}, status=status.HTTP_400_BAD_REQUEST)
-
-                    except BaseException as e:
-                        return Response({"Error: ": "Iva no encontrado para actualizar"}, status=status.HTTP_400_BAD_REQUEST)
-        except BaseException as ex:
-            return Response({"Error: ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, method="GET")
-    def get(self, request, *args, pk):
-        try:
-            iva = None
-            if request.user.is_authenticated:
-                iva = Iva.search(pk)
-                serializer = IvaSerializer(iva, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(status=status.HTTP_401_UNAUTHORIZED)
-        except BaseException as ex:
-            return Response({"Error: ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, method="DELETE")
-    def delete(self, request, *args, pk):
-        try:
-            if request.user.is_authenticated:
-                res = Iva.remove(pk)
-                if res == True:
-                    return Response(status=status.HTTP_200_OK)
-                else:
-                    return Response({"Error: ": str(res)}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(status=status.HTTP_401_UNAUTHORIZED)
-        except BaseException as ex:
-            return Response({"Error: ": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class ListIva(ListAPIView):
-    serializer_class = IvaSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        if self.request.user.is_authenticated:
-            return Iva.list()
-        else:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-
 
 # Web service producto
 class ProductoViews(LoginRequiredMixin, APIView):
@@ -681,7 +595,7 @@ class ProductoViews(LoginRequiredMixin, APIView):
             if request.user.is_authenticated:
                 serializer = ProductoSerializer(data=request.data)
                 if serializer.is_valid():
-                    serializer.save()
+                    serializer.create()
                     return Response(status=status.HTTP_201_CREATED)
                 else:
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -778,18 +692,42 @@ class FacturaView(LoginRequiredMixin, APIView):
                     #print("serializer ", serializer)
 
                     if serializer.is_valid():
-                        print('datos validados')
 
                         facts = FacturaCabecera.search_to_factura(
                             request.data["establecimiento"], request.data["punto_emision"], request.data["secuencia"], request.data["emisor"])
-                        print('facts ', facts)
+                        
                         if len(facts) > 0:
-                            print("Factura con datos repetidos.")
                             return Response({"Error: ": "Ya existe una factura con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
                         else:
-                            print('serializer para guardar ')
-                            serializer.save()
+                            
+                            fecha = request.data["fecha"]
+                            emi_temp = Emisor.objects.get(id=request.data["emisor"])
+                            est_temp = Establecimiento.objects.get(id = request.data["establecimiento"])
+                            pemi_temp = PuntoEmision.objects.get(id = request.data["punto_emision"])
+                            
+                            
+                            #Para generar el codigo de acceso.
+                            access_key = modulo11(
+                                fecha, "01", str(emi_temp.identificacion),
+                                str(emi_temp.ambiente), str(est_temp.serie), str(pemi_temp.serie),
+                                (str(request.data["secuencia"])).zfill(9), "1")
+                            
+                            serializer.save(autorizacion=access_key, claveacceso=access_key)
                             print("factura guardada ")
+                            
+                            impuestos = request.data["impuestos_factura"]
+                            for impuesto in impuestos:
+                                imp_factura = ImpuestoFactura(
+                                    base = impuesto["base"],
+                                    valor = impuesto["valor"],
+                                    iva = Iva(id=impuesto["iva"]),
+                                    facturaCabecera = FacturaCabecera(id=serializer.data["id"]),
+                                    usuario = request.user
+                                )
+                                imp_factura.save()
+                                print("impuesto factura guardada")
+                                logger.message("impuesto factura guardada")
+                                
 
                             data_factura_detalle = request.data["factura_detalle"]
                             #tam_factura_detalle = len(data_factura_detalle)
@@ -1070,7 +1008,19 @@ class NotaDebitoView(LoginRequiredMixin, APIView):
                         if len(nota_debito) > 0:
                             return Response({"Error": "Este documento ya esta registrado."}, status=status.HTTP_400_BAD_REQUEST)
                         else:
-                            serializer.save()
+                            fecha = request.data["fecha"]
+                            emi_temp = Emisor.objects.get(id=request.data["emisor"])
+                            est_temp = Establecimiento.objects.get(id = request.data["establecimiento"])
+                            pemi_temp = PuntoEmision.objects.get(id = request.data["puntoEmision"])
+                            
+                            
+                            #Para generar el codigo de acceso.
+                            access_key = modulo11(
+                                fecha, "05", str(emi_temp.identificacion),
+                                str(emi_temp.ambiente), str(est_temp.serie), str(pemi_temp.serie),
+                                (str(request.data["secuencia"])).zfill(9), "1")
+                            print("access_key ",access_key)
+                            serializer.save(autorizacion=access_key, claveacceso=access_key)
 
                             pagos = []
                             for pago in request.data["forma_pago_debito"]:
@@ -1528,17 +1478,27 @@ class NotaCreditoView(LoginRequiredMixin, APIView):
                     serializer = NotaCreditoSerializer(data=request.data)
                     res = NotaCredito.objects.filter(emisor=request.data["emisor"], establecimiento=request.data[
                                                      "establecimiento"], puntoEmision=request.data["puntoEmision"], secuencia=request.data["secuencia"])
-                    print('res ', res)
+                    
                     if len(res) <= 0:
                         if serializer.is_valid():
-                            serializer.save()
+                            fecha = request.data["fecha"]
+                            emi_temp = Emisor.objects.get(id=request.data["emisor"])
+                            est_temp = Establecimiento.objects.get(id = request.data["establecimiento"])
+                            pemi_temp = PuntoEmision.objects.get(id = request.data["puntoEmision"])
+                            
+                            
+                            #Para generar el codigo de acceso.
+                            access_key = modulo11(
+                                fecha, "04", str(emi_temp.identificacion),
+                                str(emi_temp.ambiente), str(est_temp.serie), str(pemi_temp.serie),
+                                (str(request.data["secuencia"])).zfill(9), "1")
+                            print("access_key ",access_key)
+                            serializer.save(autorizacion=access_key ,claveacceso=access_key)
                             details = []
-                            print("id serialized ", serializer.data["id"])
-                            print("detalle nota de credito ")
+                            
                             try:
                                 for detail in request.data["detalle_nota_credito"]:
-                                    print("id nota de credito ",
-                                          serializer.data["id"])
+                                    
                                     cantidad_temp = detail["cantidad"]
 
                                     valorUnitario_temp = detail["valorUnitario"]
@@ -1551,18 +1511,11 @@ class NotaCreditoView(LoginRequiredMixin, APIView):
 
                                     irbpnr_temp = detail["irbpnr"]
 
-                                    notaCredito_temp = NotaCredito(
-                                        id=serializer.data["id"])
-                                    print("notaCredito_temp ",
-                                          notaCredito_temp.id)
+                                    notaCredito_temp = NotaCredito(id=serializer.data["id"])
 
-                                    producto_temp = Producto(
-                                        id=detail["producto"])
-
-                                    print("Producto temp ", producto_temp)
+                                    producto_temp = Producto(id=detail["producto"])
 
                                     usuario_temp = request.user
-                                    print("usuario_temp ", usuario_temp)
 
                                     detnc = DetalleNC(
                                         cantidad=cantidad_temp,
@@ -1999,6 +1952,7 @@ class RetencionView(LoginRequiredMixin, APIView):
             try:
                 with transaction.atomic():
                     serializer = RetencionSerializer(data=request.data)
+                    
                     if serializer.is_valid():
                         if len(Retencion.objects.filter(
                             emisor=request.data["emisor"],
@@ -2007,7 +1961,20 @@ class RetencionView(LoginRequiredMixin, APIView):
                             pemision=request.data["pemision"],
                             secuencia=request.data['secuencia']
                         )) <= 0:
-                            serializer.save()
+                            fecha = request.data["fecha"]
+                            emi_temp = Emisor.objects.get(id=request.data["emisor"])
+                            est_temp = Establecimiento.objects.get(id = request.data["establecimiento"])
+                            pemi_temp = PuntoEmision.objects.get(id = request.data["pemision"])
+                            
+                            
+                            #Para generar el codigo de acceso.
+                            access_key = modulo11(
+                                fecha, "07", str(emi_temp.identificacion),
+                                str(emi_temp.ambiente), str(est_temp.serie), str(pemi_temp.serie),
+                                (str(request.data["secuencia"])).zfill(9), "1")
+                            
+                            serializer.save(autorizacion=access_key,clave_acceso=access_key)
+                            
                             for retencion in request.data["retenciones_compra"]:
                                 baseImponible = retencion["baseImponible"]
                                 valor_retenido = retencion["valor_retenido"]
@@ -2027,12 +1994,12 @@ class RetencionView(LoginRequiredMixin, APIView):
                                 )
                                 res = Retencion.create(result)
                                 print("Guardado ", res)
-
+                            
                             return Response(serializer.data, status=status.HTTP_201_CREATED)
                         else:
                             return Response({"Error": "Ya existe una retención con estos datos."}, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        return Response(status=status.HTTP_400_BAD_REQUEST)
+                        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
             except IntegrityError as integrity:
                 return Response({"Error": str(integrity)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except BaseException as ex:
@@ -2216,22 +2183,19 @@ class GenerateSecuenceDocument(LoginRequiredMixin, APIView):
         establecimiento = self.kwargs["establecimiento"]
         p_emision = self.kwargs["p_emision"]
         
-        print("tipo_doc ",tipo_doc)
-        print("id_emisor ",id_emisor)
-        print("establecimiento ",establecimiento)
-        print("p_emision ",p_emision)
         #1 Factura.
         #2 Nota de credito.
         #3 Nota de debito.
         #4 Retencion.
-            
+        
+        #val  = modulo11("2022-04-08", "01", "0106405236001", "1", "001", "001", "000000001", "1")
+        
         if (request.user.is_authenticated):
             try:
                 emisor_temp = Emisor.objects.get(id=id_emisor)
-                print("emisor temporal ",emisor_temp.id)
+                
                 try:
                     establecimiento_temp = Establecimiento.objects.get(id=establecimiento)
-                    print("establecimiento_temp ",establecimiento_temp)
                     
                     try:
                         p_emision_temp = PuntoEmision.objects.get(id=p_emision)
@@ -2285,3 +2249,45 @@ class GenerateSecuenceDocument(LoginRequiredMixin, APIView):
         
         
 
+def modulo11(fecha, tipo_comp, numero_ruc_cliente, ambiente, establecimiento, pemision, secuencia, tipo_emision):
+    """
+    Metodo para generar la clave de acceso.
+    """
+    codigo = "20220408"
+    
+    if len(fecha)==10 and len(tipo_comp)==2 and len(numero_ruc_cliente)==13 and len(ambiente)==1 \
+        and len(establecimiento)==3 and len(pemision)==3 and len(secuencia)==9 \
+        and len(tipo_emision)==1:
+        dv = 0
+            
+        arr_fecha = fecha.split("-")
+        anio=arr_fecha[0]
+        month = arr_fecha[1]
+        day = arr_fecha[2]
+        
+        digit_part = day+month+anio+tipo_comp+numero_ruc_cliente+ambiente+establecimiento+pemision+secuencia+tipo_emision+codigo
+        
+        arr_digitos = list(digit_part)
+        
+        sum = 0
+        factor =2
+        for digit in arr_digitos:
+            sum = sum + (int(digit) * factor)
+            if factor ==7:
+                factor = 2
+            else:
+                factor=+1
+        
+        dv = 11 - (sum % 11)
+        
+        if dv ==10:
+            return 1
+        if dv == 11:
+            return 0
+        
+        digit_part=digit_part+str(dv)
+        return digit_part
+    else:
+        return "La longitud de los campos no es valida."
+    
+    

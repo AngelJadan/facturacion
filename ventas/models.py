@@ -10,8 +10,8 @@ class Emisor(models.Model):
         ("05", "Cedula"),
     )
     TYPE_AMB = (
-        ("01", "Pruebas"),
-        ("02", "Producción"),)
+        ("1", "Pruebas"),
+        ("2", "Producción"),)
 
     id = models.AutoField(
         db_column='emi_id', primary_key=True, verbose_name="Id")
@@ -197,19 +197,19 @@ class Establecimiento(models.Model):
         verbose_name_plural = "Establecimientos"
 
     def __str__(self):
-        return str(self.id)
+        return str(self.serie)
 
     def create(establecimiento):
         try:
             est = None
             for est_temp in Establecimiento.objects.filter(serie=establecimiento.serie, emisor=establecimiento.emisor):
                 est = est_temp
-            if est==None:
+            if est == None:
                 establecimiento.save()
                 return establecimiento
             else:
                 return "Ya existe un establecimiento con esta serie"
-            
+
         except BaseException as ex:
             return ex
 
@@ -226,6 +226,7 @@ class Establecimiento(models.Model):
             return True
         except BaseException as ex:
             return ex
+
     def search_id(id):
         try:
             return Establecimiento.objects.get(id=id)
@@ -255,14 +256,14 @@ class PuntoEmision(models.Model):
                                    null=False, blank=False, default="sn", verbose_name="Descripción")
     establecimiento = models.ForeignKey(
         Establecimiento, db_column="pem_establecimiento", related_name="puntos_emision", on_delete=models.PROTECT, verbose_name="Establecimiento")
-        #Establecimiento, db_column="pem_establecimiento", on_delete=models.PROTECT, verbose_name="Establecimiento")
+    # Establecimiento, db_column="pem_establecimiento", on_delete=models.PROTECT, verbose_name="Establecimiento")
     estado = models.BooleanField(
         db_column="pem_estado", null=False, blank=False, default=False, verbose_name="Estado")
     usuario = models.ForeignKey(
         User, on_delete=models.CASCADE, db_column="pem_usuario", verbose_name="Usuario")
 
     def __str__(self):
-        return str(self.id)
+        return str(self.serie)
 
     class Meta:
         verbose_name = "Punto de emisión"
@@ -271,11 +272,12 @@ class PuntoEmision(models.Model):
     def create(puntoEmision):
         try:
             pemi_temp = None
-            print("serie ", puntoEmision.serie, " est ", puntoEmision.establecimiento)
+            print("serie ", puntoEmision.serie,
+                  " est ", puntoEmision.establecimiento)
             for punto in PuntoEmision.objects.filter(serie=puntoEmision.serie, establecimiento=puntoEmision.establecimiento):
                 pemi_temp = punto
-            
-            print("pemi_temp ",pemi_temp)
+
+            print("pemi_temp ", pemi_temp)
             if pemi_temp == None:
                 puntoEmision.save()
                 return puntoEmision
@@ -319,7 +321,11 @@ class PuntoEmision(models.Model):
 
 class Cliente(models.Model):
     TYPE_ID = (
-        ("05", "Cédula"),)
+        ("04", "RUC"),
+        ("05", "Cédula"),
+        ("06", "Pasaporte"),
+        ("07", "Consumidor final"),
+        ("08", "Identificación del exterior"),)
 
     id = models.AutoField(
         db_column="cli_id", primary_key=True, verbose_name="Id")
@@ -396,58 +402,39 @@ class Cliente(models.Model):
             return ex
 
 
-class Iva(models.Model):
-    id = models.AutoField(db_column="iva_id", primary_key=True)
-    descripcion = models.CharField(
-        db_column="iva_descripcion", max_length=250, null=True, blank=True, default="", verbose_name='Descripción')
-    porcentaje = models.FloatField(
-        db_column="iva_porcentaje", null=False, blank=False, default=0.00, unique=True, verbose_name='Porcentaje')
-    user = models.ForeignKey(
-        User, db_column="iva_user", on_delete=models.CASCADE, verbose_name="Usuario")
+TYPE_IMPUESTO = (
+    ('2', 'IVA'),
+    ('3', 'ICE'),
+    ('5', 'IRBPNR')
+)
 
-    def __str__(self):
-        return str(self.id)
+
+class Impuesto(models.Model):
+
+    id = models.AutoField(
+        db_column="imp_id", primary_key=True, verbose_name="Id"
+    )
+    tipo = models.CharField(
+        db_column="imp_tipo", max_length=5, null=False, blank=False, choices=TYPE_IMPUESTO, verbose_name="Tipo de impuesto"
+    )
+    codigo = models.CharField(
+        db_column="imp_codigo", max_length=10, null=False, blank=False, verbose_name="Código"
+    )
+    descripcion = models.CharField(
+        db_column="imp_descripcion", max_length=250, null=True, blank=True, verbose_name="descripcion"
+    )
+    usuario = models.ForeignKey(
+        User, db_column="imp_usuario", on_delete=models.PROTECT, verbose_name="Usuario"
+    )
 
     class Meta:
-        verbose_name = "IVA"
-        verbose_name_plural = "IVAs"
+        verbose_name = "Impuesto"
+        verbose_name_plural = "Impuestos"
 
-    def create(iva):
-        try:
-            iva.save()
-            return iva._id
-        except BaseException as ex:
-            return ex
-        
-    def update(iva):
-        try:
-            Iva.objects.filter(id=iva.id).update(descripcion=iva.descripcion,
-                                                porcentaje=iva.porcentaje,
-                                                user=iva.user)
-            return True
-        except BaseException as ex:
-            return ex
+    def __str__(self):
+        return str(self.tipo)
 
-    def search(id=int):
-        try:
-            return Iva.objects.filter(id=id)
-        except BaseException as ex:
-            return ex
 
-    def remove(id=int):
-        try:
-            Iva.objects.filter(id=id).delete()
-            return True
-        except BaseException as ex:
-            return ex
-
-    def list():
-        try:
-            return Iva.objects.all().order_by("porcentaje")
-        except BaseException as ex:
-            return ex
-
-        
 class Producto(models.Model):
     id = models.AutoField(
         db_column='pro_id', primary_key=True, verbose_name="Id")
@@ -459,10 +446,7 @@ class Producto(models.Model):
         db_column='pro_auxiliar', max_length=20, null=False, blank=False, unique=True, verbose_name="Código auxiliar")
     tipo = models.CharField(
         db_column='pro_tipo', max_length=20, null=False, blank=False, verbose_name="Tipo")
-    ice = models.FloatField(
-        db_column="pro_ice", null=False, blank=False, verbose_name="ICE")
-    irbpnr = models.FloatField(
-        db_column="pro_irbpnr", null=False, blank=False, verbose_name="IRBPNR")
+
     precio1 = models.FloatField(
         db_column="pro_precio1", null=False, blank=False, default=0.00, verbose_name="Precio 1")
     precio2 = models.FloatField(
@@ -471,9 +455,6 @@ class Producto(models.Model):
         db_column="pro_precio3", null=False, blank=False, default=0.00, verbose_name="Precio 3")
     precio4 = models.FloatField(
         db_column="pro_precio4", null=False, blank=False, default=0.00, verbose_name="Precio 4")
-    tipo_iva = models.ForeignKey(Iva, db_column="pro_iva",
-                            on_delete=models.PROTECT, verbose_name="Tipo IVA", default=1)
-    valor_iva = models.FloatField( db_column="pro_valor_iva", null=False, blank=False, default=0.00, verbose_name="Valor iva")
     descripcion = models.CharField(
         db_column="pro_descripcion", max_length=255, null=False, blank=True, default="", verbose_name="Descripción")
     emisor = models.ForeignKey(
@@ -482,7 +463,7 @@ class Producto(models.Model):
         User, db_column="pro_usuario", on_delete=models.CASCADE, verbose_name="Usuario")
 
     def __str__(self):
-        return str(self.id)
+        return str(self.nombre)
 
     class Meta:
         verbose_name = "Producto"
@@ -504,11 +485,11 @@ class Producto(models.Model):
     def update(producto):
         try:
             Producto.objects.filter(id=producto.id).\
-            update(nombre=producto.nombre, codigoPrincipal=producto.codigoPrincipal,
-                    codigoAuxiliar=producto.codigoAuxiliar, tipo=producto.tipo, ice=producto.ice, 
-                    irbpnr=producto.irbpnr, precio1=producto.precio1, precio2=producto.precio2, 
-                    precio3=producto.precio3, precio4=producto.precio4, tipo_iva=producto.tipo_iva, valor_iva=producto.valor_iva,
-                    descripcion=producto.descripcion, emisor=producto.emisor, usuario=producto.usuario)
+                update(nombre=producto.nombre, codigoPrincipal=producto.codigoPrincipal,
+                       codigoAuxiliar=producto.codigoAuxiliar, tipo=producto.tipo,
+                       precio1=producto.precio1, precio2=producto.precio2,
+                       precio3=producto.precio3, precio4=producto.precio4,
+                       descripcion=producto.descripcion, emisor=producto.emisor, usuario=producto.usuario)
             return True
         except BaseException as e:
             return e
@@ -525,6 +506,27 @@ class Producto(models.Model):
             return Producto.objects.filter(emisor=id_emisor)
         except BaseException as ex:
             return ex
+
+
+class ImpuestoProducto(models.Model):
+    id = models.AutoField(
+        db_column="ipr_id", primary_key=True, verbose_name="Id"
+    )
+    impuesto = models.ForeignKey(
+        Impuesto, on_delete=models.CASCADE, db_column="ipr_impuesto", verbose_name="Impuesto"
+    )
+    producto = models.ForeignKey(
+        Producto, related_name="producto_impuestos", on_delete=models.CASCADE, db_column="ipr_producto", verbose_name="Producto"
+    )
+    usuario = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="Usuario")
+
+    class Meta:
+        verbose_name = "Impuesto producto"
+        verbose_name_plural = "Impuestos producto"
+
+    def __str__(self):
+        return str(self.id)
 
 
 class FacturaCabecera(models.Model):
@@ -552,28 +554,10 @@ class FacturaCabecera(models.Model):
                                  null=True, blank=True, default=None, verbose_name="Punto de emisión")
     secuenciaGuia = models.CharField(db_column="fac_secuencia_guia", max_length=9,
                                      null=True, blank=True, default=None, verbose_name="Secuencia de guia")
-    noobjetoiva = models.FloatField(
-        db_column="fac_no_objetoiva", null=False, blank=False, default=0.00, verbose_name="No objeto de IVA")
-    tarifa0 = models.FloatField(
-        db_column="fac_tarifa0", null=False, blank=False, default=0.00, verbose_name="Tafira 0%")
-    tarifadif0 = models.FloatField(
-        db_column="fac_tarifadif0", null=False, blank=False, default=0.00, verbose_name="Tafira diferente 0%")
-    excentoiva = models.FloatField(
-        db_column="fac_excento", null=False, blank=False, default=0.00, verbose_name="Excento IVA")
-    totaldescuento = models.FloatField(
-        db_column="fac_total_descuento", null=False, blank=False, default=0.00, verbose_name="Total descuento")
-    totalice = models.FloatField(
-        db_column="fac_total_ice", null=False, blank=False, default=0.00, verbose_name="Total ICE")
-    totalirbpnt = models.FloatField(
-        db_column="fac_total_irbpnt", null=False, blank=False, default=0.00, verbose_name="Total IRBPNT")
-    tipo_iva = models.ForeignKey(Iva, db_column="fac_iva",
-                            on_delete=models.CASCADE, verbose_name="Tipo IVA", default=1)
-    valor_iva = models.FloatField(db_column="fact_valor_iva", 
-                                  null=False, blank=False, default=0.00, verbose_name="Valor iva")    
+
     propina = models.FloatField(
         db_column="fac_propina", null=False, blank=False, default=0, verbose_name="Propina")
-    total = models.FloatField(
-        db_column="fac_total", null=False, blank=False, default=0.00, verbose_name="Total")
+
     estado = models.BooleanField(
         db_column="fac_estado", null=False, blank=False, default=True, verbose_name="Estado")
     usuario = models.ForeignKey(
@@ -593,26 +577,25 @@ class FacturaCabecera(models.Model):
         except BaseException as ex:
             return ex
 
-
     def search_to_id(id=int):
         try:
             return FacturaCabecera.objects.filter(id=id)
         except BaseException as ex:
             return ex
-    def get_numero_secuencia(establecimiento=int, punto_emision=int ,emisor_id=int,):
+
+    def get_numero_secuencia(establecimiento=int, punto_emision=int, emisor_id=int,):
         """
         establecimiento: Id del establecimiento.
         punto_emision: Id del punto de emision.
         emisor_id: 
-        
+
         return: Metodo para obtener el ultimo numero de secuencia de la factura.
         """
         try:
-            return FacturaCabecera.objects.filter(emisor=emisor_id, establecimiento=establecimiento,punto_emision=punto_emision).order_by("+secuencia")[0]
-            
+            return FacturaCabecera.objects.filter(emisor=emisor_id, establecimiento=establecimiento, punto_emision=punto_emision).order_by("+secuencia")[0]
+
         except BaseException as ex:
             return ex
-        
 
     def search_to_factura(establecimiento=int, punto_emision=int, secuencia=int, emisor_id=int):
         """
@@ -620,29 +603,30 @@ class FacturaCabecera(models.Model):
         punto_emision: Serie de punto de emision ejemplo 002
         secuencia: Numero de secuencia de la factura
         emisor_id :Id del emisor.
-        
+
         """
         est = None
         p_emi = None
         emis = None
 
         try:
-            print("est ",establecimiento, " pemi ", punto_emision, " secuencia ",secuencia, " emisor ", emisor_id)
+            print("est ", establecimiento, " pemi ", punto_emision,
+                  " secuencia ", secuencia, " emisor ", emisor_id)
             est = Establecimiento.objects.get(id=establecimiento)
-            print("est ",est)
+            print("est ", est)
             p_emi = PuntoEmision.objects.get(id=punto_emision)
-            print("p_emi ",p_emi)
+            print("p_emi ", p_emi)
             emis = Emisor.objects.get(id=emisor_id)
-            
-            print("val encont est ",est, " p_emi ",p_emi, " emis ",emis)
-            
+
+            print("val encont est ", est, " p_emi ", p_emi, " emis ", emis)
+
             if est != None and p_emi != None and emis != None:
                 return FacturaCabecera.objects.filter(establecimiento=est, punto_emision=p_emi, secuencia=secuencia, emisor=emis)
             else:
                 return []
 
         except BaseException as ex:
-            print('ex ',ex)
+            print('ex ', ex)
             return ex
 
     def remove(id=int):
@@ -676,12 +660,10 @@ class FacturaDetalle(models.Model):
         db_column="det_v_unitario", null=False, blank=False, default=0.00, verbose_name="Valor unitario")
     descuento = models.FloatField(
         db_column="det_descuento", null=False, blank=False, default=0.00, verbose_name="Descuento")
-    ice = models.FloatField(
-        db_column="det_ice", null=False, blank=False, default=0.00, verbose_name="ICE")
+
     valorTotal = models.FloatField(
         db_column="det_total", null=False, blank=False, default=0.00, verbose_name="Total")
-    irbpnr = models.FloatField(
-        db_column="det_irbpnr", null=False, blank=False, default=0.00, verbose_name="IRBPNR")
+
     factura = models.ForeignKey(FacturaCabecera, db_column="det_factura",
                                 related_name="factura_detalle", on_delete=models.CASCADE, verbose_name="Factura cabecera")
     producto = models.ForeignKey(
@@ -735,6 +717,35 @@ class FacturaDetalle(models.Model):
             return ex
 
 
+class ImpuestoDetalle(models.Model):
+
+    id = models.AutoField(
+        db_column="ide_id", primary_key=True, verbose_name="Id"
+    )
+    codigoImpuesto = models.CharField(
+        db_column="ide_codigo_imp", max_length=5, null=False, blank=False, choices=TYPE_IMPUESTO, verbose_name="Código de impuesto"
+    )
+    tarifa = models.FloatField(
+        db_column="ide_tarifa", null=False, blank=False, verbose_name="Tarifa"
+    )
+    baseImponible = models.FloatField(
+        db_column="ide_base_imponible", null=False, blank=False, verbose_name="Base imponible"
+    )
+    valor = models.FloatField(
+        db_column="ide_valor", null=False, blank=False, verbose_name="Valor impuesto"
+    )
+    facturaDetalle = models.ForeignKey(
+        FacturaDetalle, related_name="detalle_impuestos", db_column="ide_factura_detalle", on_delete=models.CASCADE, verbose_name="Factura detalle"
+    )
+
+    class Meta:
+        verbose_name = "Impuesto detalle"
+        verbose_name_plural = "Impuestos detalle"
+
+    def __str__(self):
+        return str(self.id)
+
+
 class NotaDebito(models.Model):
     TYPE_COMPROBANTES = (
         ("01", "Factura"),
@@ -752,9 +763,9 @@ class NotaDebito(models.Model):
     secuencia = models.IntegerField(
         db_column="nde_secuencia", null=False, blank=False, verbose_name="Secuencia")
     autorizacion = models.CharField(
-        db_column="nde_autorizacion", max_length=49, null=False, blank=False, verbose_name="Autorización")
+        db_column="nde_autorizacion", max_length=49, null=True, blank=True, verbose_name="Autorización")
     claveacceso = models.CharField(
-        db_column="nde_claveacceso", max_length=49, null=False, blank=False, verbose_name="Clave de acceso")
+        db_column="nde_claveacceso", max_length=49, null=True, blank=True, verbose_name="Clave de acceso")
     fecha = models.DateField(db_column="nde_fecha",
                              null=False, blank=False, verbose_name="Fecha")
     comprobanteModificado = models.CharField(
@@ -834,7 +845,7 @@ class NotaDebito(models.Model):
     def update(notadebito):
         try:
             NotaDebito.objects.filter(id=notadebito.id).update(establecimiento=notadebito.establecimiento, puntoEmision=notadebito.puntoEmision, secuencia=notadebito.secuencia, autorizacion=notadebito.autorizacion, claveacceso=notadebito.claveacceso, fecha=notadebito.fecha, comprobanteModificado=notadebito.comprobanteModificado, establecimientoDoc=notadebito.establecimientoDoc,
-                                                                puntoEmisionDoc=notadebito.puntoEmisionDoc, secuenciaDoc=notadebito.secuenciaDoc, tarifa0=notadebito.tarifa0, tarifadif0=notadebito.tarifadif0, noObjetoIva=notadebito.noObjetoIva, excento=notadebito.excento, valorIce=notadebito.valorIce, iva=notadebito.iva, total=notadebito.total, estado=notadebito.estado, emisor=notadebito.emisor, cliente=notadebito.cliente, usuario=notadebito.usuario)
+                                                               puntoEmisionDoc=notadebito.puntoEmisionDoc, secuenciaDoc=notadebito.secuenciaDoc, tarifa0=notadebito.tarifa0, tarifadif0=notadebito.tarifadif0, noObjetoIva=notadebito.noObjetoIva, excento=notadebito.excento, valorIce=notadebito.valorIce, iva=notadebito.iva, total=notadebito.total, estado=notadebito.estado, emisor=notadebito.emisor, cliente=notadebito.cliente, usuario=notadebito.usuario)
             return True
         except BaseException as ex:
             return ex
@@ -848,7 +859,7 @@ class NotaDebito(models.Model):
 
     def list_to_emisor(emisor_id=int, start=str, end=str):
         try:
-            print(" id emisor ",emisor_id ," start ", start," end ",end)
+            print(" id emisor ", emisor_id, " start ", start, " end ", end)
             return NotaDebito.objects.filter(emisor=emisor_id, fecha__range=[start, end])
         except BaseException as ex:
             return ex
@@ -877,11 +888,12 @@ class Otro(models.Model):
             return otro.id
         except BaseException as ex:
             return ex
+
     def update(otro):
         try:
-            Otro.objects.filter(id=otro.id).update(nombre=otro.nombre, 
-                                                     descripcion=otro.descripcion,
-                                                     factura=otro.factura)
+            Otro.objects.filter(id=otro.id).update(nombre=otro.nombre,
+                                                   descripcion=otro.descripcion,
+                                                   factura=otro.factura)
             return True
         except BaseException as ex:
             return ex
@@ -939,8 +951,8 @@ class FormaPago(models.Model):
     def update(forma_pago):
         try:
             FormaPago.objects.filter(id=forma_pago.id).update(codigo=forma_pago.codigo,
-                                                            descripcion=forma_pago.descripcion,
-                                                            usuario=forma_pago.usuario)
+                                                              descripcion=forma_pago.descripcion,
+                                                              usuario=forma_pago.usuario)
         except BaseException as ex:
             return ex
 
@@ -952,120 +964,125 @@ class FormaPago(models.Model):
 
 
 class FormaPagoFactura(models.Model):
-    
-    id = models.AutoField(db_column="fpf_id", primary_key=True, verbose_name="Id")
+
+    id = models.AutoField(db_column="fpf_id",
+                          primary_key=True, verbose_name="Id")
     formaPago = models.ForeignKey(
-        FormaPago, db_column="fpf_forma_pago" , on_delete=models.PROTECT, verbose_name="Forma de pago"
+        FormaPago, db_column="fpf_forma_pago", on_delete=models.PROTECT, verbose_name="Forma de pago"
     )
     facturaid = models.ForeignKey(
         FacturaCabecera, related_name="forma_pago_factura", db_column="fpf_factura", on_delete=models.PROTECT, verbose_name="Factura"
     )
-    tiempo = models.IntegerField(db_column="fpf_tiempo", null=True, blank=True, verbose_name="Tiemmpo")
-    plazo = models.IntegerField(db_column="fpf_plazo", null=True, blank=True, verbose_name = "Plazo")
-    valor = models.FloatField(db_column="fpf_valor", null=True, blank=True, verbose_name="Valor")
+    tiempo = models.IntegerField(
+        db_column="fpf_tiempo", null=True, blank=True, verbose_name="Tiemmpo")
+    plazo = models.IntegerField(
+        db_column="fpf_plazo", null=True, blank=True, verbose_name="Plazo")
+    valor = models.FloatField(db_column="fpf_valor",
+                              null=True, blank=True, verbose_name="Valor")
     usuario = models.ForeignKey(
-        User, db_column="fpf_usuario", on_delete= models.PROTECT
+        User, db_column="fpf_usuario", on_delete=models.PROTECT
     )
-    
+
     def __str__(self):
         return str(self.id)
-    
+
     class Meta:
         verbose_name = "Forma de pago factura"
         verbose_name_plural = "Formas de pago de factura"
-    
+
     def create(factura_pago):
         try:
             factura_pago.save()
             return factura_pago.id
         except BaseException as ex:
             return ex
-    
+
     def search_id(id=int):
         try:
             return FormaPagoFactura.objects.filter(id=id)
         except BaseException as ex:
             return ex
-    
+
     def search_to_id_factura(id=int):
         try:
             return FormaPagoFactura.objects.filter(facturaid=id)
         except BaseException as ex:
             return ex
-    
+
     def update(formaPagoFactura):
         try:
             FormaPagoFactura.objects.filter(id=formaPagoFactura).update(
-                formaPago = formaPagoFactura.formaPago,
-                facturaid = formaPagoFactura.facturaid,
-                tiempo = formaPagoFactura.tiempo,
-                plazo = formaPagoFactura.plazo,
-                valor = formaPagoFactura.valor,
-                usuario = formaPagoFactura.usuario
+                formaPago=formaPagoFactura.formaPago,
+                facturaid=formaPagoFactura.facturaid,
+                tiempo=formaPagoFactura.tiempo,
+                plazo=formaPagoFactura.plazo,
+                valor=formaPagoFactura.valor,
+                usuario=formaPagoFactura.usuario
             )
             return True
         except BaseException as ex:
             return ex
+
     def remove(id=int):
         try:
             FormaPagoFactura.objects.filter(id=id).delete()
             return True
         except BaseException as ex:
             return ex
-    
+
+
 class FormaPagoNotaDebito(models.Model):
     id = models.AutoField(db_column="fpn", primary_key=True, verbose_name="Id")
-    nota_debito = models.ForeignKey(NotaDebito, related_name="forma_pago_debito", db_column="fpn_nota_debito", on_delete=models.PROTECT)
-    forma_pago = models.ForeignKey(FormaPago, db_column="fpn_forma_pago", on_delete=models.PROTECT)
-    plazo = models.IntegerField(db_column="fpn_plazo", null=True, blank=True, verbose_name = "Plazo")
-    valor = models.FloatField(db_column="fpn_valor", null=True, blank=True, verbose_name="Valor")
-    usuario = models.ForeignKey(User, db_column="fpn_usuario", on_delete= models.PROTECT)
-    
+    nota_debito = models.ForeignKey(
+        NotaDebito, related_name="forma_pago_debito", db_column="fpn_nota_debito", on_delete=models.PROTECT)
+    forma_pago = models.ForeignKey(
+        FormaPago, db_column="fpn_forma_pago", on_delete=models.PROTECT)
+    plazo = models.IntegerField(
+        db_column="fpn_plazo", null=True, blank=True, verbose_name="Plazo")
+    valor = models.FloatField(db_column="fpn_valor",
+                              null=True, blank=True, verbose_name="Valor")
+    usuario = models.ForeignKey(
+        User, db_column="fpn_usuario", on_delete=models.PROTECT)
+
     def __str__(self):
         return str(self.id)
-    
-    
+
     class Meta:
         verbose_name = "Forma de pago Nota de Debito"
         verbose_name_plural = "Formas de pago Nota de Debito"
-        
+
     def search(id=int):
         try:
             return FormaPagoNotaDebito.objects.filter(id=id)
         except BaseException as ex:
             return ex
-    
+
     def search_to_nota_debito(id=int):
         try:
             return FormaPagoNotaDebito.objects.filter(nota_debito=id)
         except BaseException as ex:
             return ex
-    
-    def remove(id = int):
+
+    def remove(id=int):
         try:
             FormaPagoNotaDebito.objects.filter(id=id).delete()
             return True
         except BaseException as ex:
             return ex
+
     def update(formaPagoDebito):
         try:
             FormaPagoNotaDebito.objects.filter(id=formaPagoDebito.id).update(
-                nota_debito= formaPagoDebito.nota_debito,
-                forma_pago= formaPagoDebito.forma_pago,
-                plazo= formaPagoDebito.plazo,
-                valor= formaPagoDebito.valor,
-                usuario= formaPagoDebito.usuario,
+                nota_debito=formaPagoDebito.nota_debito,
+                forma_pago=formaPagoDebito.forma_pago,
+                plazo=formaPagoDebito.plazo,
+                valor=formaPagoDebito.valor,
+                usuario=formaPagoDebito.usuario,
             )
             return True
         except BaseException as ex:
             return ex
-        
-    
-        
-        
-    
-    
-    
+
 
 class NotaCredito(models.Model):
     COMPROBANTES = (
@@ -1082,9 +1099,9 @@ class NotaCredito(models.Model):
     secuencia = models.IntegerField(
         db_column="ncr_secuencia", null=False, blank=False, verbose_name="Secuencia")
     autorizacion = models.CharField(
-        db_column="ncr_autorizacion", max_length=49, null=False, blank=False, verbose_name="Autorización")
+        db_column="ncr_autorizacion", max_length=49, null=True, blank=True, verbose_name="Autorización")
     claveacceso = models.CharField(
-        db_column="ncr_claveacceso", max_length=49, null=False, blank=False, verbose_name="Clave de acceso")
+        db_column="ncr_claveacceso", max_length=49, null=True, blank=True, verbose_name="Clave de acceso")
     fecha = models.DateField(db_column="ncr_fecha",
                              null=False, blank=False, verbose_name="Fecha")
     comprobanteModificado = models.CharField(
@@ -1120,7 +1137,7 @@ class NotaCredito(models.Model):
     emisor = models.ForeignKey(
         Emisor, db_column="ncr_emisor", on_delete=models.PROTECT, verbose_name="Emisor")
     cliente = models.ForeignKey(
-        Cliente, db_column="ncr_cliente", on_delete=models.PROTECT, verbose_name = "Cliente", default =1 )
+        Cliente, db_column="ncr_cliente", on_delete=models.PROTECT, verbose_name="Cliente", default=1)
     usuario = models.ForeignKey(
         User, db_column="ncr_usuario", on_delete=models.PROTECT, verbose_name="Usuario")
 
@@ -1158,7 +1175,7 @@ class NotaCredito(models.Model):
             return NotaCredito.objects.filter(establecimiento=est.id, puntoEmision=p_emi.id, emisor=emisor_id, secuencia=secu)
         except BaseException as ex:
             return ex
-        
+
     def remove(id=int):
         try:
             NotaCredito.objects.filter(id=id).delete()
@@ -1256,8 +1273,8 @@ class OtroNDNC(models.Model):
             return OtroNDNC.objects.filter(notaCredito=nota_credito_id)
         except BaseException as ex:
             return ex
-        
-    def remove(id = int):
+
+    def remove(id=int):
         try:
             OtroNDNC.objects.filter(id=id).delete()
             return True
@@ -1295,12 +1312,12 @@ class DetalleNC(models.Model):
         verbose_name_plural = "Detalles Nota de crédito"
 
     def create(detalle_nc):
-        print("data recebive ",detalle_nc)
+        print("data recebive ", detalle_nc)
         try:
             detalle_nc.save()
             return detalle_nc.id
         except BaseException as ex:
-            print("Error create detail nc ",ex)
+            print("Error create detail nc ", ex)
             return ex
 
     def search(id=int):
@@ -1319,7 +1336,7 @@ class DetalleNC(models.Model):
     def update(detalle_nc):
         try:
             DetalleNC.objects.filter(id=detalle_nc.id).update(cantidad=detalle_nc.cantidad, valorUnitario=detalle_nc.valorUnitario, descuento=detalle_nc.descuento, ice=detalle_nc.ice,
-                                                               valorTotal=detalle_nc.valorUnitario, irbpnr=detalle_nc.irbpnr, notaCredito=detalle_nc.notaCredito, producto=detalle_nc.producto, usuario=detalle_nc.usuario)
+                                                              valorTotal=detalle_nc.valorUnitario, irbpnr=detalle_nc.irbpnr, notaCredito=detalle_nc.notaCredito, producto=detalle_nc.producto, usuario=detalle_nc.usuario)
             return True
         except BaseException as ex:
             return ex
@@ -1332,12 +1349,12 @@ class DetalleNC(models.Model):
 
 
 class RetencionCodigo(models.Model):
-    
+
     TYPE = (
-        ("iva","I. V. A."),
-        ("renta","Renta")
+        ("iva", "I. V. A."),
+        ("renta", "Renta")
     )
-    
+
     id = models.AutoField(
         db_column="rco_id", primary_key=True, verbose_name="Id")
     codigo = models.CharField(
@@ -1426,9 +1443,9 @@ class Retencion(models.Model):
     secuencia_doc = models.CharField(
         db_column="ret_secuencia_doc", max_length=9, null=False, blank=False, verbose_name="Secuencia documento")
     autorizacion = models.CharField(
-        db_column="ret_autorizacion", max_length=49, null=True, blank=False, verbose_name="Autorización")
+        db_column="ret_autorizacion", max_length=49, null=True, blank=True, verbose_name="Autorización")
     clave_acceso = models.CharField(
-        db_column="ret_clave_acceso", max_length=49, null=False, blank=False, verbose_name="Clave de acceso")
+        db_column="ret_clave_acceso", max_length=49, null=True, blank=True, verbose_name="Clave de acceso")
     usuario = models.ForeignKey(
         User, db_column="ret_usuario", on_delete=models.PROTECT, verbose_name="Usuario")
 
@@ -1552,5 +1569,3 @@ class RetencionCompra(models.Model):
             return RetencionCompra.objects.filter(emisor=emisor_id)
         except BaseException as ex:
             return ex
-
-
